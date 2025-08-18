@@ -136,55 +136,54 @@
                 </div>
             </div>
             <div class="header-actions">
-                <!-- Updated PDF buttons -->
+                <!-- Updated PDF buttons with new icons -->
                 <button class="pdf-btn" id="createPdfBtn" title="Create PDF">
                     <i class="fas fa-file-pdf"></i>
                     <span>Create PDF</span>
                 </button>
                 <button class="pdf-btn" id="extractPdfImagesBtn" title="Extract Images from PDF">
-                    <i class="fas fa-file-image"></i>
+                    <i class="fas fa-file-export"></i>
                     <span>Extract Images</span>
                 </button>
-                <!-- New PDF Compressor button -->
                 <button class="pdf-btn" id="pdfCompressorBtn" title="PDF Compressor">
                     <i class="fas fa-file-contract"></i>
                     <span>Compress PDF</span>
                 </button>
-                <!-- New PDF Merger button -->
                 <button class="pdf-btn" id="pdfMergerBtn" title="PDF Merger">
                     <i class="fas fa-file-medical"></i>
                     <span>Merge PDF</span>
                 </button>
-                <!-- New PDF to Word/Excel button -->
                 <button class="pdf-btn" id="pdfToWordExcelBtn" title="PDF to Word/Excel">
                     <i class="fas fa-file-word"></i>
                     <span>PDF to Word/Excel</span>
                 </button>
                 
-                <!-- New buttons -->
                 <button class="pdf-btn" id="batchRenameBtn" title="Batch Rename Files">
-                    <i class="fas fa-file-signature"></i>
+                    <i class="fas fa-font"></i>
                     <span>Batch Rename</span>
                 </button>
                 <button class="pdf-btn" id="exifEditorBtn" title="EXIF Editor">
-                    <i class="fas fa-info-circle"></i>
+                    <i class="fas fa-camera"></i>
                     <span>EXIF Editor</span>
                 </button>
                 <button class="pdf-btn" id="collageMakerBtn" title="Photo Collage Maker">
-                    <i class="fas fa-th-large"></i>
+                    <i class="fas fa-th"></i>
                     <span>Collage Maker</span>
                 </button>
                 
-                <!-- New Improve Quality button -->
                 <button class="pdf-btn" id="improveQualityBtn" title="Improve Image Quality">
-                    <i class="fas fa-star"></i>
+                    <i class="fas fa-medal"></i>
                     <span>Image Quality Boost</span>
                 </button>
                 
-                <!-- Added Preview/Mockup Generator button -->
                 <button class="pdf-btn" id="previewMockupBtn" title="Preview/Mockup Generator">
-                    <i class="fas fa-cube"></i>
+                    <i class="fas fa-laptop"></i>
                     <span>Sample Design Creator</span>
+                </button>
+                
+                <button class="pdf-btn" id="colorPaletteBtn" title="Color Palette Extractor">
+                    <i class="fas fa-palette"></i>
+                    <span>Color Palette</span>
                 </button>
                 
                 <button class="history-toggle" id="historyToggle" title="Processing history">
@@ -216,7 +215,6 @@
                     <h2>Upload Images</h2>
                 </div>
                 
-                <!-- Updated info message -->
                 <div class="info-box">
                     <i class="fas fa-info-circle"></i>
                     You can upload up to 15 images at once. Supported formats: JPG, PNG, WebP, AVIF, HEIC, TIFF.
@@ -253,7 +251,6 @@
                     <i class="fas fa-info-circle"></i> Changes applied to all images
                 </div>
                 
-                <!-- Image editor -->
                 <div class="editor-container" id="editorContainer">
                     <div class="section-title">
                         <i class="fas fa-crop-alt"></i>
@@ -295,7 +292,6 @@
                             <i class="fas fa-adjust"></i>
                             <span>Adjust</span>
                         </div>
-                        <!-- Added Auto button -->
                         <div class="editor-btn" id="autoAdjustBtn">
                             <i class="fas fa-magic"></i>
                             <span>Auto</span>
@@ -306,14 +302,12 @@
                         </div>
                     </div>
                     
-                    <!-- Added info block -->
                     <div class="info-box" style="margin-top: 10px; font-size: 0.9rem;">
                         <span class="explanation-icon">i</span>
                         Auto adjustment applies moderate enhancements. For best results, 
                         manually fine-tune after using auto mode.
                     </div>
                     
-                    <!-- Touch controls for mobile -->
                     <div class="touch-controls">
                         <div class="touch-btn" id="touchRotateLeft">
                             <i class="fas fa-undo"></i>
@@ -330,13 +324,11 @@
                         <div class="touch-btn" id="touchAdjust">
                             <i class="fas fa-adjust"></i>
                         </div>
-                        <!-- Added Auto button for mobile -->
                         <div class="touch-btn" id="touchAutoAdjust">
                             <i class="fas fa-magic"></i>
                         </div>
                     </div>
                     
-                    <!-- Crop controls (updated version) -->
                     <div class="crop-controls" id="cropControls">
                         <div class="crop-header">
                             <h3><i class="fas fa-crop-alt"></i> Crop Image</h3>
@@ -377,7 +369,6 @@
                         </div>
                     </div>
                     
-                    <!-- Adjustment controls -->
                     <div class="adjust-controls" id="adjustControls">
                         <h3 class="card-title"><i class="fas fa-sliders-h"></i> Image Adjustments</h3>
                         
@@ -418,17 +409,14 @@
                     </div>
                 </div>
                 
-                <!-- Watermarks - UPDATED BLOCK -->
                 <div class="watermark-controls" id="watermarkControls">
                     <h3 class="card-title"><i class="fas fa-water"></i> Watermark</h3>
                     
-                    <!-- Type toggle -->
                     <div class="watermark-type-toggle">
                         <button class="watermark-type-btn active" data-type="text">Text</button>
                         <button class="watermark-type-btn" data-type="image">Image</button>
                     </div>
                     
-                    <!-- Text watermark -->
                     <div class="watermark-text-section">
                         <div class="watermark-row">
                             <input type="text" id="watermarkText" placeholder="Watermark text">
@@ -441,7 +429,6 @@
                         </div>
                     </div>
                     
-                    <!-- Image watermark -->
                     <div class="watermark-image-section" style="display: none;">
                         <div class="watermark-row">
                             <input type="file" id="watermarkImageInput" accept="image/*">
@@ -453,7 +440,6 @@
                         </div>
                     </div>
                     
-                    <!-- General settings -->
                     <div class="watermark-row">
                         <label>Opacity:</label>
                         <input type="range" id="watermarkOpacity" min="10" max="100" value="70">
@@ -543,7 +529,6 @@
                     </div>
                 </div>
                 
-                <!-- Advanced settings -->
                 <div class="settings-toggle">
                     <button class="settings-toggle-btn" id="toggleAdvancedSettings">
                         <i class="fas fa-cog"></i> Advanced Settings
@@ -649,28 +634,23 @@
 
     <div class="toast" id="toast"></div>
 
-    <!-- New footer -->
     <footer style="background: linear-gradient(135deg, #0d0d0d 0%, #1a1a1a 100%); color: #fff; padding: 45px 15px 15px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; position: relative; overflow: hidden; font-size: 12px;">
-      <!-- Gradient line at top -->
       <div style="position: absolute; top: 0; left: 0; width: 100%; height: 3px; background: linear-gradient(90deg, #ffcc00, #ff9900);"></div>
       
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 25px; max-width: 1100px; margin: 0 auto; position: relative; z-index: 2;">
         
-        <!-- About Us -->
         <div style="position: relative; padding: 18px; border-radius: 10px; background: rgba(30,30,30,0.7); backdrop-filter: blur(8px); box-shadow: 0 6px 20px rgba(0,0,0,0.25);">
           <div style="position: absolute; top: -13px; left: 13px; width: 32px; height: 32px; background: #ffcc00; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px;"></div>
           <h3 style="color:#ffcc00; font-size: 13px; margin-top: 14px; margin-bottom: 12px; font-weight: 600;">About Us</h3>
           <p style="line-height: 1.5; color: #e6e6e6;">Image PixMizer is an online service for fast and high-quality image optimization. Created by an independent developer from Ukraine.</p>
         </div>
         
-        <!-- Payment -->
         <div style="position: relative; padding: 18px; border-radius: 10px; background: rgba(30,30,30,0.7); backdrop-filter: blur(8px); box-shadow: 0 6px 20px rgba(0,0,0,0.25);">
           <div style="position: absolute; top: -13px; left: 13px; width: 32px; height: 32px; background: #ffcc00; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px;"></div>
           <h3 style="color:#ffcc00; font-size: 13px; margin-top: 14px; margin-bottom: 12px; font-weight: 600;">Payment</h3>
           <p style="line-height: 1.5; color: #e6e6e6;">We accept payments via PayPal — fast, convenient, and secure. Pay with your bank card or PayPal balance.</p>
         </div>
         
-        <!-- Privacy Policy -->
         <div style="position: relative; padding: 18px; border-radius: 10px; background: rgba(30,30,30,0.7); backdrop-filter: blur(8px); box-shadow: 0 6px 20px rgba(0,0,0,0.25);">
           <div style="position: absolute; top: -13px; left: 13px; width: 32px; height: 32px; background: #ffcc00; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px;"></div>
           <h3 style="color:#ffcc00; font-size: 13px; margin-top: 14px; margin-bottom: 12px; font-weight: 600;">Privacy</h3>
@@ -681,7 +661,6 @@
       
       <hr style="border: none; height: 1px; background: linear-gradient(90deg, transparent, #444, transparent); margin: 30px auto 15px; max-width: 1100px;">
       
-      <!-- Contacts & Social -->
       <div style="text-align: center; max-width: 1100px; margin: 0 auto; position: relative; z-index: 2;">
         <div style="display: inline-flex; align-items: center; background: rgba(40,40,40,0.6); padding: 8px 18px; border-radius: 25px; margin-bottom: 12px; backdrop-filter: blur(5px);">
           <svg style="width: 16px; height: 16px; margin-right: 6px; fill: #ffcc00;" viewBox="0 0 24 24">
@@ -706,40 +685,29 @@
         </div>
         
         <p style="color: #aaa; letter-spacing: 0.5px;">© 2025 Image PixMizer. All rights reserved.</p>
-        <!-- Views counter -->
         <img id="page-views" alt="Page Views" style="display: block; margin: 10px auto;"/>
       </div>
     </footer>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
-    <!-- Cropper.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
-    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-    <!-- Added HEIC library -->
     <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.3/dist/heic2any.min.js"></script>
-    <!-- Added TIFF library -->
     <script src="https://cdn.jsdelivr.net/npm/tiff.js@1.0.0/tiff.min.js"></script>
     <script src="script.js"></script>
     
-    <!-- Added handler for PDF buttons -->
     <script>
         document.getElementById('createPdfBtn').addEventListener('click', function() {
             window.location.href = 'PDF.html';
         });
         
-        // New handler for extract images button
         document.getElementById('extractPdfImagesBtn').addEventListener('click', function() {
             window.location.href = 'PDF2.html';
         });
-    </script>
-    
-    <!-- Handlers for new buttons -->
-    <script>
-        // Handlers for new buttons
+        
         document.getElementById('pdfCompressorBtn').addEventListener('click', function() {
             window.location.href = 'PDF Compressor.html';
         });
@@ -748,12 +716,10 @@
             window.location.href = 'PDF Merger.html';
         });
         
-        // Handler for new PDF to Word/Excel button
         document.getElementById('pdfToWordExcelBtn').addEventListener('click', function() {
             window.location.href = 'PDF to Word or Excel.html';
         });
         
-        // Handlers for new tool buttons
         document.getElementById('batchRenameBtn').addEventListener('click', function() {
             window.location.href = 'Batch rename files.html';
         });
@@ -766,20 +732,20 @@
             window.location.href = 'Photo Collage Maker.html';
         });
         
-        // New handler for quality improvement button
         document.getElementById('improveQualityBtn').addEventListener('click', function() {
             window.location.href = 'Improved image quality.html';
         });
         
-        // New handler for Preview/Mockup Generator button
         document.getElementById('previewMockupBtn').addEventListener('click', function() {
             window.location.href = 'Preview Mockup Generator.html';
         });
+        
+        document.getElementById('colorPaletteBtn').addEventListener('click', function() {
+            window.location.href = 'Color Palette Extractor.html';
+        });
     </script>
     
-    <!-- Script for views counter -->
     <script>
-        // Create parameters for the counter
         const params = new URLSearchParams({
             style: 'flat-square',
             label: 'Views',
@@ -787,13 +753,8 @@
             logo: 'firebase'
         });
         
-        // Get current page path
         const currentPath = window.location.pathname;
-        
-        // Form counter URL
         const counterURL = `https://hits.sh/imageopt-pro.web.app${currentPath}.svg?${params.toString()}`;
-        
-        // Set source for the image
         document.getElementById('page-views').src = counterURL;
     </script>
 </body>
