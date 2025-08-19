@@ -186,10 +186,14 @@
                     <span>Color Palette</span>
                 </button>
                 
-                <!-- Добавлена кнопка Professional SVG Converter -->
-                <button class="pdf-btn" id="svgConverterBtn" title="Professional SVG Converter">
+<button class="pdf-btn" id="svgConverterBtn" title="Professional SVG Converter">
+    <i class="fas fa-project-diagram"></i>
+    <span>SVG Converter</span>
+</button>
+
+                <button class="pdf-btn" id="multiFormatConverterBtn" title="Multi-format Image Converter">
                     <i class="fas fa-exchange-alt"></i>
-                    <span>SVG Converter</span>
+                    <span>Multi-format Converter</span>
                 </button>
                 
                 <button class="history-toggle" id="historyToggle" title="Processing history">
@@ -750,9 +754,14 @@
             window.location.href = 'Color Palette Extractor.html';
         });
         
-        // Добавлен обработчик для новой кнопки SVG Converter
+        // Обработчик для кнопки SVG Converter
         document.getElementById('svgConverterBtn').addEventListener('click', function() {
             window.location.href = 'Professional SVG Converter.html';
+        });
+        
+        // Добавлен обработчик для новой кнопки Multi-format Converter
+        document.getElementById('multiFormatConverterBtn').addEventListener('click', function() {
+            window.location.href = 'Multi-format Image Converter.html';
         });
     </script>
     
