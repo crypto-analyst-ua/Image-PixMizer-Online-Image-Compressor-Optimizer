@@ -10,18 +10,10 @@ const firebaseConfig = {
 
 // Free version limits
 const FREE_LIMITS = {
-    DAILY: 15,
-    PER_BATCH: 5,
-    MAX_SIZE: 7 * 1024 * 1024,
-    FORMATS: ['jpeg', 'png', 'webp']
-};
-
-// Premium version limits
-const PREMIUM_LIMITS = {
-    DAILY: 1000,
-    PER_BATCH: 50,
-    MAX_SIZE: 50 * 1024 * 1024,
-    FORMATS: ['jpeg', 'png', 'webp', 'avif', 'heic', 'tiff']
+    DAILY: 15,         // 15 images per day
+    PER_BATCH: 5,       // 5 files at once
+    MAX_SIZE: 7 * 1024 * 1024, // 7 MB
+    FORMATS: ['jpeg', 'png', 'webp', 'heic', 'avif', 'tiff'] 
 };
 
 // State management
@@ -40,9 +32,6 @@ const state = {
     heicSupported: false,
     tiffSupported: true,
     isPremium: localStorage.getItem('premiumUser') === 'true',
-    isTrial: localStorage.getItem('trialUser') === 'true',
-    trialDaysLeft: parseInt(localStorage.getItem('trialDaysLeft')) || 0,
-    trialEndDate: localStorage.getItem('trialEndDate'),
     user: null,
     cropMode: false,
     cropping: false,
@@ -80,7 +69,9 @@ const state = {
         sharpness: 0,
         temperature: 0
     },
-    cropper: null // Для хранения экземпляра Cropper
+    cropper: null, // Для хранения экземпляра Cropper
+    isTrial: false,
+    trialDaysLeft: 0
 };
 
 // DOM Elements
@@ -170,26 +161,23 @@ const elements = {
     watermarkTextSection: document.querySelector('.watermark-text-section'),
     watermarkImageSection: document.querySelector('.watermark-image-section'),
     watermarkImagePreview: document.getElementById('watermarkImagePreview'),
-    watermarkImageInput: document.getElementById('watermarkImageInput')
+    watermarkImageInput: document.getElementById('watermarkImageInput'),
+    watermarkImageScale: document.getElementById('watermarkImageScale'),
+    // Добавляем элементы для премиум-функций
+    createPdfBtn: document.getElementById('createPdfBtn'),
+    extractPdfImagesBtn: document.getElementById('extractPdfImagesBtn'),
+    pdfCompressorBtn: document.getElementById('pdfCompressorBtn'),
+    pdfMergerBtn: document.getElementById('pdfMergerBtn'),
+    pdfToWordExcelBtn: document.getElementById('pdfToWordExcelBtn'),
+    batchRenameBtn: document.getElementById('batchRenameBtn'),
+    exifEditorBtn: document.getElementById('exifEditorBtn'),
+    collageMakerBtn: document.getElementById('collageMakerBtn'),
+    improveQualityBtn: document.getElementById('improveQualityBtn'),
+    previewMockupBtn: document.getElementById('previewMockupBtn'),
+    colorPaletteBtn: document.getElementById('colorPaletteBtn'),
+    svgConverterBtn: document.getElementById('svgConverterBtn'),
+    multiFormatConverterBtn: document.getElementById('multiFormatConverterBtn')
 };
-
-// Получение текущих лимитов на основе статуса пользователя
-function getCurrentLimits() {
-    return (state.isPremium || state.isTrial) ? PREMIUM_LIMITS : FREE_LIMITS;
-}
-
-// Проверка доступа к функциям
-function checkFeatureAccess(feature) {
-    // Все функции доступны во время пробного периода и для премиум-пользователей
-    if (state.isTrial || state.isPremium) return true;
-    
-    // Бесплатные функции всегда доступны
-    const freeFeatures = ['imageOptimization', 'basicEditing'];
-    if (freeFeatures.includes(feature)) return true;
-    
-    // Премиум функции требуют подписки
-    return false;
-}
 
 // Show premium required modal with options
 function showPremiumRequiredModal(feature) {
@@ -262,7 +250,12 @@ async function activateTrial() {
     }
 }
 
-// Настройка обработчиков для кнопок навигации
+// Check if user has access to a feature
+function checkFeatureAccess(feature) {
+    return state.isPremium || state.isTrial;
+}
+
+// Setup navigation handlers for premium features
 function setupNavigationHandlers() {
     const premiumFeatures = {
         'createPdfBtn': 'pdfCreation',
@@ -273,7 +266,7 @@ function setupNavigationHandlers() {
         'batchRenameBtn': 'batchRename',
         'exifEditorBtn': 'exifEditing',
         'collageMakerBtn': 'collageMaking',
-        'improveQualityBtn': 'qualityEnhancement',
+        'improveQualityBtn': 'qualityImprovement',
         'previewMockupBtn': 'mockupGeneration',
         'colorPaletteBtn': 'colorExtraction',
         'svgConverterBtn': 'svgConversion',
@@ -335,11 +328,6 @@ function initCropper() {
 
 // Toggle crop mode
 function toggleCropMode() {
-    if (!checkFeatureAccess('basicEditing')) {
-        showPremiumRequiredModal('basicEditing');
-        return;
-    }
-    
     if (state.cropMode && state.cropper) {
         destroyCropper();
         elements.cropControls.style.display = 'none';
@@ -476,7 +464,6 @@ async function checkPremiumStatus(force = false) {
 
     if (!state.firebaseInitialized || !state.user || state.user.uid === "guest") {
         state.isPremium = false;
-        state.isTrial = false;
         updatePremiumUI();
         localStorage.setItem('premiumChecked', 'true'); // Помечаем, что проверка выполнена
         return;
@@ -486,43 +473,24 @@ async function checkPremiumStatus(force = false) {
         const doc = await state.db.collection('users').doc(state.user.uid).get();
         if (doc.exists) {
             const userData = doc.data();
-            const premium = userData.premium || false;
-            const trialStart = userData.trialStart;
+            state.isPremium = userData.premium || false;
             
-            // Проверка пробного периода
-            let isTrial = false;
-            let trialDaysLeft = 0;
-            let trialEndDate = null;
-            
-            if (trialStart && !premium) {
-                const trialStartDate = trialStart.toDate();
-                trialEndDate = new Date(trialStartDate);
-                trialEndDate.setDate(trialStartDate.getDate() + 14);
-                isTrial = new Date() < trialEndDate;
-                
-                if (isTrial) {
-                    const diffTime = trialEndDate - new Date();
-                    trialDaysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                }
+            // Check trial period
+            if (userData.trialEnd && userData.trialEnd.toDate() > new Date()) {
+                state.isTrial = true;
+                state.trialDaysLeft = Math.ceil((userData.trialEnd.toDate() - new Date()) / (1000 * 60 * 60 * 24));
+                state.isPremium = true; // Give premium access during trial
+            } else {
+                state.isTrial = false;
+                state.trialDaysLeft = 0;
             }
-            
-            state.isPremium = premium || isTrial;
-            state.isTrial = isTrial;
-            state.trialDaysLeft = trialDaysLeft;
-            state.trialEndDate = trialEndDate;
             
             localStorage.setItem('premiumUser', state.isPremium);
-            localStorage.setItem('trialUser', state.isTrial);
-            localStorage.setItem('trialDaysLeft', state.trialDaysLeft);
-            if (trialEndDate) {
-                localStorage.setItem('trialEndDate', trialEndDate.toISOString());
-            }
         }
         updatePremiumUI();
     } catch (error) {
         console.error("Error getting premium status:", error);
         state.isPremium = false;
-        state.isTrial = false;
         updatePremiumUI();
     }
     localStorage.setItem('premiumChecked', 'true'); // Помечаем, что проверка выполнена
@@ -539,14 +507,6 @@ async function init() {
     state.heicSupported = typeof heic2any !== 'undefined';
     if (!state.heicSupported) {
         console.warn("HEIC conversion requires heic2any library");
-    }
-    
-    // Проверяем пробный период в localStorage
-    const savedTrial = localStorage.getItem('trialUser');
-    const savedTrialDays = localStorage.getItem('trialDaysLeft');
-    if (savedTrial === 'true' && savedTrialDays) {
-        state.isTrial = true;
-        state.trialDaysLeft = parseInt(savedTrialDays);
     }
     
     try {
@@ -568,7 +528,6 @@ async function init() {
                     state.user = { email: "guest@example.com", uid: "guest" };
                     elements.userEmail.textContent = "Guest";
                     state.isPremium = false;
-                    state.isTrial = false;
                     updatePremiumUI();
                 }
                 renderHistory();
@@ -579,7 +538,6 @@ async function init() {
             state.user = { email: "guest@example.com", uid: "guest" };
             elements.userEmail.textContent = "Guest";
             state.isPremium = false;
-            state.isTrial = false;
             updatePremiumUI();
             renderHistory();
         }
@@ -589,7 +547,6 @@ async function init() {
         state.user = { email: "guest@example.com", uid: "guest" };
         elements.userEmail.textContent = "Guest (offline)";
         state.isPremium = false;
-        state.isTrial = false;
         updatePremiumUI();
         renderHistory();
     }
@@ -600,9 +557,11 @@ async function init() {
     // Инициализация Cropper
     initCropper();
     
+    // Setup navigation handlers for premium features
+    setupNavigationHandlers();
+    
     setupEventListeners();
     initEnhancements();
-    setupNavigationHandlers();
 }
 
 // Initialize new features
@@ -752,11 +711,6 @@ function setupEnhancementEventListeners() {
 
 // Auto adjust image
 function autoAdjustImage() {
-    if (!checkFeatureAccess('basicEditing')) {
-        showPremiumRequiredModal('basicEditing');
-        return;
-    }
-    
     // Оптимальные значения для автонастройки
     const autoSettings = {
         brightness: 0,    // Яркость - без изменений
@@ -814,69 +768,16 @@ function updateDailyCounter() {
 
     // Update UI
     elements.dailyCount.textContent = state.dailyCount;
+    elements.dailyLimit.textContent = state.isPremium ? '∞' : FREE_LIMITS.DAILY;
     
-    const limits = getCurrentLimits();
-    elements.dailyLimit.textContent = (state.isPremium || state.isTrial) ? '∞' : limits.DAILY;
-    
-    // Hide counter for premium users and trial users
-    elements.dailyCounter.style.display = (state.isPremium || state.isTrial) ? 'none' : 'flex';
-}
-
-// Update premium UI
-function updatePremiumUI() {
-    if (state.isTrial) {
-        elements.premiumStatus.textContent = `Trial (${state.trialDaysLeft} days)`;
-        elements.premiumStatus.style.background = 'linear-gradient(135deg, #4a6bff, #8a2be2)';
-        elements.premiumStatus.style.color = '#fff';
-        elements.upgradeBtn.style.display = 'block';
-    } else if (state.isPremium) {
-        elements.premiumStatus.textContent = 'Premium';
-        elements.premiumStatus.style.background = 'linear-gradient(135deg, #ffd700, #ff9800)';
-        elements.premiumStatus.style.color = '#333';
-        elements.upgradeBtn.style.display = 'none';
-    } else {
-        elements.premiumStatus.textContent = 'Basic';
-        elements.premiumStatus.style.background = '#a5b1c2';
-        elements.premiumStatus.style.color = '#fff';
-        elements.upgradeBtn.style.display = 'block';
-    }
-    
-    const limits = getCurrentLimits();
-    elements.dailyLimit.textContent = (state.isPremium || state.isTrial) ? '∞' : limits.DAILY;
-    elements.dailyCounter.style.display = (state.isPremium || state.isTrial) ? 'none' : 'flex';
-    
-    // Форматы для премиум и trial пользователей
-    if (state.isPremium || state.isTrial) {
-        // Enable AVIF for premium users
-        const avifOption = document.querySelector('#format option[value="avif"]');
-        if (avifOption) avifOption.disabled = false;
-        
-        // Enable HEIC for premium users if supported
-        const heicOption = document.querySelector('#format option[value="heic"]');
-        if (heicOption) {
-            heicOption.disabled = !state.heicSupported;
-        }
-        
-        // Enable TIFF for premium users
-        const tiffOption = document.querySelector('#format option[value="tiff"]');
-        if (tiffOption) tiffOption.disabled = false;
-    } else {
-        // Бесплатные пользователи: только jpeg, png, webp
-        const allowedFormats = ['jpeg', 'png', 'webp'];
-        document.querySelectorAll('#format option').forEach(option => {
-            if (!allowedFormats.includes(option.value)) {
-                option.disabled = true;
-            } else {
-                option.disabled = false;
-            }
-        });
-    }
+    // Hide counter for premium users
+    elements.dailyCounter.style.display = state.isPremium ? 'none' : 'flex';
 }
 
 // Check AVIF support
 async function checkAvifSupport() {
     const avifImage = new Image();
-    avifImage.src = 'data:image/avif;base64,AAAAIGZ0eXBhdmlmAAAAAGF2aWZtaWYxbWlhZk1BMUIAAADybWV0YQAAAAAAAAAoaGRscgAAAAAAAAAAcGljdAAAAAAAAAAAAAAAAGxpYmF2aWYAAAAADnBpdG0AAAAAAAEAAAAeaWxvYwAAAABEAAABAAEAAAABAAABGgAAAB0AAAAoaWluZgAAAAAAAQAAABppbmZlAgAAAAABAABhdjAxQ29sob3IAAAAAamlwcnAAAABLaXBjbwAAABRpc3BlAAAAAAAAAAIAAAACAAAAEHBpeGkAAAAAAwgICAAAAAxhdjFDgQ0MAAAAABNjb2xybmNseAACAAIAAYAAAAAXaXBtYQAAAAAAAAABAAEEAQKDBAAAACVtZGF0EgAKCBgANogQEAwgMg8f8D///8WfhwB8+EERQ==';
+    avifImage.src = 'data:image/avif;base64,AAAAIGZ0eXBhdmlmAAAAAGF2aWZtaWYxbWlhZk1BMUIAAADybWV0YQAAAAAAAAAoaGRscgAAAAAAAAAAcGljdAAAAAAAAAAAAAAAAGxpYmF2aWYAAAAADnBpdG0AAAAAAAEAAAAeaWxvYwAAAABEAAABAAEAAAABAAABGgAAAB0AAAAoaWluZgAAAAAAAQAAABppbmZlAgAAAAABAABhdjAxQ29sb3IAAAAAamlwcnAAAABLaXBjbwAAABRpc3BlAAAAAAAAAAIAAAACAAAAEHBpeGkAAAAAAwgICAAAAAxhdjFDgQ0MAAAAABNjb2xybmNseAACAAIAAYAAAAAXaXBtYQAAAAAAAAABAAEEAQKDBAAAACVtZGF0EgAKCBgANogQEAwgMg8f8D///8WfhwB8+EERQ==';
     
     await new Promise(resolve => setTimeout(resolve, 100));
     
@@ -958,18 +859,12 @@ function setupEventListeners() {
         if (state.firebaseInitialized && state.user && state.user.uid !== "guest") {
             firebase.auth().signOut().then(() => {
                 localStorage.removeItem('premiumUser');
-                localStorage.removeItem('trialUser');
-                localStorage.removeItem('trialDaysLeft');
-                localStorage.removeItem('trialEndDate');
                 localStorage.removeItem('userId');
                 window.location.href = 'index.html';
             });
         } else {
             // For guest users
             localStorage.removeItem('premiumUser');
-            localStorage.removeItem('trialUser');
-            localStorage.removeItem('trialDaysLeft');
-            localStorage.removeItem('trialEndDate');
             window.location.href = 'index.html';
         }
     });
@@ -986,12 +881,6 @@ function setBatchEditMode(mode) {
 
 // Toggle watermark controls
 function toggleWatermarkControls() {
-    if (!checkFeatureAccess('basicEditing')) {
-        showPremiumRequiredModal('basicEditing');
-        elements.enableWatermark.checked = false;
-        return;
-    }
-    
     state.watermark.enabled = elements.enableWatermark.checked;
     elements.watermarkControls.style.display = state.watermark.enabled ? 'block' : 'none';
 }
@@ -1118,6 +1007,37 @@ function showToast(message, duration = 3000) {
     }, duration);
 }
 
+// Update premium UI
+function updatePremiumUI() {
+    if (state.isTrial) {
+        elements.premiumStatus.textContent = `Trial (${state.trialDaysLeft}d left)`;
+        elements.premiumStatus.style.background = 'linear-gradient(135deg, #4CAF50, #8BC34A)';
+        elements.premiumStatus.style.color = '#fff';
+        elements.upgradeBtn.style.display = 'block';
+    } else if (state.isPremium) {
+        elements.premiumStatus.textContent = 'Premium';
+        elements.premiumStatus.style.background = 'linear-gradient(135deg, #ffd700, #ff9800)';
+        elements.premiumStatus.style.color = '#333';
+        elements.upgradeBtn.style.display = 'none';
+    } else {
+        elements.premiumStatus.textContent = 'Basic';
+        elements.premiumStatus.style.background = '#a5b1c2';
+        elements.upgradeBtn.style.display = 'block';
+    }
+    
+    // Enable AVIF for premium users
+    const avifOption = document.querySelector('#format option[value="avif"]');
+    if (avifOption) avifOption.disabled = false;
+    
+    // Enable HEIC for premium users if supported
+    const heicOption = document.querySelector('#format option[value="heic"]');
+    if (heicOption) {
+        heicOption.disabled = !state.heicSupported;
+    }
+    
+    updateDailyCounter();
+}
+
 // Drag and drop handlers
 function handleDragOver(e) {
     e.preventDefault();
@@ -1162,18 +1082,16 @@ async function handleFileSelect(e) {
 
 // Add files to the state and preview
 async function addFiles(files) {
-    const limits = getCurrentLimits();
-    
     // Free user limitations
-    if (!state.isPremium && !state.isTrial) {
+    if (!state.isPremium) {
         // Max files per batch
-        if (files.length > limits.PER_BATCH) {
-            showToast(`Free version: max ${limits.PER_BATCH} files at once`);
-            files = files.slice(0, limits.PER_BATCH);
+        if (files.length > FREE_LIMITS.PER_BATCH) {
+            showToast(`Free version: max ${FREE_LIMITS.PER_BATCH} files at once`);
+            files = files.slice(0, FREE_LIMITS.PER_BATCH);
         }
         
         // Max file size
-        files = files.filter(file => file.size <= limits.MAX_SIZE);
+        files = files.filter(file => file.size <= FREE_LIMITS.MAX_SIZE);
     }
     
     // Filter and convert HEIC/TIFF files
@@ -1278,52 +1196,37 @@ function renderFilePreviews() {
             preview.innerHTML = `
                 <img src="${e.target.result}" alt="${file.name}">
                 <div class="file-name">${file.name}</div>
-                <button class="remove-file" data-index="${index}">
-                    <i class="fas fa-times"></i>
-                </button>
+                <div class="remove-file" data-index="${index}">×</div>
             `;
             
-            preview.addEventListener('click', () => {
-                state.currentFileIndex = index;
-                updatePreviewImage();
-                highlightSelectedPreview();
-            });
-            
-            preview.querySelector('.remove-file').addEventListener('click', (e) => {
-                e.stopPropagation();
-                removeFile(index);
-            });
-            
             elements.filePreviews.appendChild(preview);
+            
+            // Add event to set current file index
+            preview.addEventListener('click', (e) => {
+                if (!e.target.classList.contains('remove-file')) {
+                    state.currentFileIndex = index;
+                    highlightSelectedPreview();
+                    updatePreviewImage();
+                    resetEditState();
+                }
+            });
+            
+            // Add event to remove file
+            const removeBtn = preview.querySelector('.remove-file');
+            removeBtn.addEventListener('click', () => removeFile(index));
         };
         
         reader.readAsDataURL(file);
     });
     
-    highlightSelectedPreview();
-}
-
-// Highlight selected preview
-function highlightSelectedPreview() {
-    document.querySelectorAll('.file-preview').forEach((preview, index) => {
-        preview.classList.toggle('selected', index === state.currentFileIndex);
-    });
-}
-
-// Remove file
-function removeFile(index) {
-    state.originalFiles.splice(index, 1);
-    renderFilePreviews();
-    
-    if (state.originalFiles.length === 0) {
-        reset();
-    } else {
-        state.currentFileIndex = Math.min(state.currentFileIndex, state.originalFiles.length - 1);
-        updatePreviewImage();
+    // Highlight first file by default
+    if (state.originalFiles.length > 0) {
+        state.currentFileIndex = 0;
+        highlightSelectedPreview();
     }
 }
 
-// Update preview image
+// Update preview image in editor
 function updatePreviewImage() {
     if (state.originalFiles.length === 0) return;
     
@@ -1332,12 +1235,77 @@ function updatePreviewImage() {
     
     reader.onload = function(e) {
         elements.previewImage.src = e.target.result;
-        elements.previewImage.onload = () => {
-            resetEditState();
-        };
+        
+        // Reset edit state for new image
+        state.rotation = 0;
+        state.flipHorizontal = false;
+        state.crop = null;
+        
+        // Apply current transformations
+        applyImageTransformations();
+        
+        // Reset crop
+        elements.cropOverlay.innerHTML = '';
+        
+        // Reset adjustments
+        resetAdjustments();
     };
     
     reader.readAsDataURL(file);
+}
+
+// Apply current transformations to preview image
+function applyImageTransformations() {
+    let transform = '';
+    
+    // Apply rotation
+    if (state.rotation !== 0) {
+        transform += `rotate(${state.rotation}deg) `;
+    }
+    
+    // Apply flip
+    if (state.flipHorizontal) {
+        transform += `scaleX(-1) `;
+    }
+    
+    elements.previewImage.style.transform = transform;
+}
+
+// Highlight selected preview
+function highlightSelectedPreview() {
+    document.querySelectorAll('.file-preview').forEach((preview, index) => {
+        if (index === state.currentFileIndex) {
+            preview.style.border = '3px solid var(--accent)';
+            preview.style.transform = 'scale(1.05)';
+        } else {
+            preview.style.border = 'none';
+            preview.style.transform = 'scale(1)';
+        }
+    });
+}
+
+// Remove file from state
+function removeFile(index) {
+    state.originalFiles.splice(index, 1);
+    renderFilePreviews();
+    
+    // Reset preview section if no files left
+    if (state.originalFiles.length === 0) {
+        reset();
+        elements.editorContainer.style.display = 'none';
+    } else {
+        // Update current index if needed
+        if (state.currentFileIndex >= state.originalFiles.length) {
+            state.currentFileIndex = state.originalFiles.length - 1;
+        }
+        highlightSelectedPreview();
+        updatePreviewImage();
+    }
+}
+
+// Update quality value display
+function updateQualityValue() {
+    elements.qualityValue.textContent = elements.qualityRange.value + '%';
 }
 
 // Reset edit state
@@ -1345,612 +1313,87 @@ function resetEditState() {
     state.rotation = 0;
     state.flipHorizontal = false;
     state.crop = null;
-    state.adjustments = {
-        brightness: 0,
-        contrast: 0,
-        saturation: 0,
-        sharpness: 0,
-        temperature: 0
-    };
+    applyImageTransformations();
+    elements.cropControls.style.display = 'none';
+    elements.cropOverlay.innerHTML = '';
+    elements.cropOverlay.style.display = 'none';
+    elements.editNotification.style.display = 'none';
+    state.cropMode = false;
     
-    elements.previewImage.style.transform = '';
-    elements.previewImage.style.filter = '';
+    // Reset crop ratios
+    elements.cropRatios.forEach(ratio => ratio.classList.remove('active'));
+    document.querySelector('.crop-ratio[data-ratio="free"]').classList.add('active');
+    state.cropRatio = 'free';
     
-    // Reset adjustment controls
-    applyAdjustmentsToControls();
+    // Сбрасываем обрезку
+    destroyCropper();
+    
+    // Reset adjustments
+    resetAdjustments();
     
     showEditNotification('Changes reset!');
 }
 
-// Show edit notification
-function showEditNotification(message) {
-    elements.editNotification.textContent = message;
-    elements.editNotification.classList.add('show');
-    setTimeout(() => elements.editNotification.classList.remove('show'), 2000);
-}
-
 // Rotate image
 function rotateImage(degrees) {
-    if (!checkFeatureAccess('basicEditing')) {
-        showPremiumRequiredModal('basicEditing');
-        return;
-    }
-    
-    state.rotation = (state.rotation + degrees) % 360;
-    applyTransformations();
-    showEditNotification(`Rotated ${degrees > 0 ? 'right' : 'left'}!`);
+    state.rotation += degrees;
+    // Normalize rotation to 0-360 range
+    state.rotation = (state.rotation % 360 + 360) % 360;
+    applyImageTransformations();
+    showEditNotification('Image rotated!');
 }
 
 // Flip image horizontally
 function flipImageHorizontal() {
-    if (!checkFeatureAccess('basicEditing')) {
-        showPremiumRequiredModal('basicEditing');
-        return;
-    }
-    
     state.flipHorizontal = !state.flipHorizontal;
-    applyTransformations();
-    showEditNotification('Flipped horizontally!');
+    applyImageTransformations();
+    showEditNotification('Image flipped!');
 }
 
-// Apply transformations
-function applyTransformations() {
-    let transform = `rotate(${state.rotation}deg)`;
-    if (state.flipHorizontal) {
-        transform += ' scaleX(-1)';
-    }
-    elements.previewImage.style.transform = transform;
-}
-
-// Update quality value display
-function updateQualityValue() {
-    elements.qualityValue.textContent = `${elements.qualityRange.value}%`;
-}
-
-// Process images
-async function processImages() {
-    if (state.originalFiles.length === 0) return;
-    
-    // Check daily limit
-    const limits = getCurrentLimits();
-    if (!state.isPremium && !state.isTrial && state.dailyCount >= limits.DAILY) {
-        showToast(`Daily limit reached (${limits.DAILY}). Upgrade to Premium for unlimited processing.`);
-        return;
-    }
-    
-    // Show processing
-    elements.processing.style.display = 'flex';
-    elements.progressBar.style.width = '0%';
-    elements.progressText.textContent = '0%';
-    
-    // Process images
-    state.optimizedFiles = [];
-    const quality = parseInt(elements.qualityRange.value) / 100;
-    const format = elements.formatSelect.value;
-    const maxWidth = parseInt(elements.maxWidthSelect.value);
-    
-    for (let i = 0; i < state.originalFiles.length; i++) {
-        const file = state.originalFiles[i];
-        
-        try {
-            const optimizedBlob = await optimizeImage(file, quality, format, maxWidth);
-            state.optimizedFiles.push({
-                original: file,
-                optimized: new File([optimizedBlob], 
-                    `${file.name.split('.')[0]}_optimized.${format}`, 
-                    { type: `image/${format}` }
-                ),
-                stats: {
-                    originalSize: file.size,
-                    optimizedSize: optimizedBlob.size,
-                    savings: file.size - optimizedBlob.size
-                }
-            });
-        } catch (error) {
-            console.error(`Error optimizing ${file.name}:`, error);
-            showToast(`Error optimizing ${file.name}`);
-        }
-        
-        // Update progress
-        const progress = Math.round((i + 1) / state.originalFiles.length * 100);
-        elements.progressBar.style.width = `${progress}%`;
-        elements.progressText.textContent = `${progress}%`;
-    }
-    
-    // Hide processing
-    elements.processing.style.display = 'none';
-    
-    // Update stats
-    updateStats();
-    
-    // Show download button
-    elements.downloadBtn.style.display = 'block';
-    
-    // Update daily counter
-    state.dailyCount += state.originalFiles.length;
-    localStorage.setItem('dailyCount', state.dailyCount);
-    updateDailyCounter();
-    
-    // Add to history
-    addToHistory();
-}
-
-// Optimize image
-async function optimizeImage(file, quality, format, maxWidth) {
-    return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.onload = async () => {
-            try {
-                // Calculate new dimensions
-                let width = img.width;
-                let height = img.height;
-                
-                if (maxWidth > 0 && width > maxWidth) {
-                    height = Math.round((height * maxWidth) / width);
-                    width = maxWidth;
-                }
-                
-                // Create canvas
-                const canvas = document.createElement('canvas');
-                canvas.width = width;
-                canvas.height = height;
-                
-                const ctx = canvas.getContext('2d');
-                
-                // Apply image adjustments if any
-                if (state.adjustments.brightness !== 0 || 
-                    state.adjustments.contrast !== 0 || 
-                    state.adjustments.saturation !== 0 ||
-                    state.adjustments.sharpness !== 0 ||
-                    state.adjustments.temperature !== 0) {
-                    applyAdjustmentsToCanvas(ctx, img, width, height);
-                } else {
-                    // Draw image without adjustments
-                    ctx.drawImage(img, 0, 0, width, height);
-                }
-                
-                // Apply watermark if enabled
-                if (state.watermark.enabled) {
-                    await applyWatermarkToCanvas(ctx, width, height);
-                }
-                
-                // Convert to desired format
-                let mimeType = `image/${format}`;
-                let options = {};
-                
-                if (format === 'jpeg') {
-                    options.quality = quality;
-                    if (state.progressiveJpeg) {
-                        // Для прогрессивного JPEG используем специальные настройки
-                        options.progressive = true;
-                    }
-                } else if (format === 'png') {
-                    // PNG compression level (0-9)
-                    const compressionLevel = state.pngCompression === 'auto' ? 
-                        Math.round((1 - quality) * 9) : parseInt(state.pngCompression);
-                    options.compressionLevel = compressionLevel;
-                } else if (format === 'webp') {
-                    options.quality = quality;
-                } else if (format === 'avif') {
-                    options.quality = Math.round(quality * 100);
-                }
-                
-                // Convert to blob
-                canvas.toBlob(
-                    blob => {
-                        if (!blob) {
-                            reject(new Error("Canvas toBlob failed"));
-                            return;
-                        }
-                        
-                        // Remove metadata if requested
-                        if (state.removeMetadata && (format === 'jpeg' || format === 'webp')) {
-                            removeMetadata(blob).then(resolve).catch(reject);
-                        } else {
-                            resolve(blob);
-                        }
-                    },
-                    mimeType,
-                    options.quality ? options.quality / 100 : undefined
-                );
-                
-            } catch (error) {
-                reject(error);
-            }
-        };
-        
-        img.onerror = () => reject(new Error("Failed to load image"));
-        img.src = URL.createObjectURL(file);
-    });
-}
-
-// Apply adjustments to canvas
-function applyAdjustmentsToCanvas(ctx, img, width, height) {
-    // Draw original image first
-    ctx.drawImage(img, 0, 0, width, height);
-    
-    // Get image data
-    const imageData = ctx.getImageData(0, 0, width, height);
-    const data = imageData.data;
-    
-    // Apply adjustments
-    for (let i = 0; i < data.length; i += 4) {
-        let r = data[i];
-        let g = data[i + 1];
-        let b = data[i + 2];
-        
-        // Brightness
-        if (state.adjustments.brightness !== 0) {
-            const brightness = state.adjustments.brightness * 2.55; // Convert percentage to 0-255
-            r = clamp(r + brightness);
-            g = clamp(g + brightness);
-            b = clamp(b + brightness);
-        }
-        
-        // Contrast
-        if (state.adjustments.contrast !== 0) {
-            const contrast = (state.adjustments.contrast + 100) / 100; // Convert percentage to multiplier
-            r = clamp(((r - 127.5) * contrast) + 127.5);
-            g = clamp(((g - 127.5) * contrast) + 127.5);
-            b = clamp(((b - 127.5) * contrast) + 127.5);
-        }
-        
-        // Saturation
-        if (state.adjustments.saturation !== 0) {
-            const gray = 0.2989 * r + 0.5870 * g + 0.1140 * b;
-            const saturation = state.adjustments.saturation / 100;
-            
-            r = clamp(gray + saturation * (r - gray));
-            g = clamp(gray + saturation * (g - gray));
-            b = clamp(gray + saturation * (b - gray));
-        }
-        
-        // Temperature (warm/cool)
-        if (state.adjustments.temperature !== 0) {
-            const temperature = state.adjustments.temperature / 100;
-            if (temperature > 0) {
-                // Warm (add red, subtract blue)
-                r = clamp(r + temperature * 50);
-                b = clamp(b - temperature * 30);
-            } else {
-                // Cool (add blue, subtract red)
-                r = clamp(r + temperature * 30);
-                b = clamp(b - temperature * 50);
-            }
-        }
-        
-        // Sharpness (applied later as it requires convolution)
-        
-        data[i] = r;
-        data[i + 1] = g;
-        data[i + 2] = b;
-    }
-    
-    // Put adjusted image data back
-    ctx.putImageData(imageData, 0, 0);
-    
-    // Apply sharpness using convolution (simplified)
-    if (state.adjustments.sharpness !== 0) {
-        const sharpness = state.adjustments.sharpness / 100;
-        if (sharpness > 0) {
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = width;
-            tempCanvas.height = height;
-            const tempCtx = tempCanvas.getContext('2d');
-            tempCtx.drawImage(ctx.canvas, 0, 0);
-            
-            // Simple sharpen kernel
-            ctx.globalAlpha = sharpness;
-            ctx.drawImage(tempCanvas, -1, -1, width + 2, height + 2);
-            ctx.globalAlpha = 1.0;
-        }
-    }
-}
-
-// Clamp value between 0-255
-function clamp(value) {
-    return Math.max(0, Math.min(255, value));
-}
-
-// Apply watermark to canvas
-async function applyWatermarkToCanvas(ctx, width, height) {
-    if (state.watermark.type === 'text') {
-        // Text watermark
-        ctx.font = `bold ${state.watermark.size}px Arial`;
-        ctx.fillStyle = state.watermark.color;
-        ctx.globalAlpha = state.watermark.opacity / 100;
-        ctx.textAlign = 'right';
-        ctx.textBaseline = 'bottom';
-        
-        const padding = 20;
-        const x = width - padding;
-        const y = height - padding;
-        
-        // Add text shadow for better visibility
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
-        ctx.shadowBlur = 3;
-        ctx.shadowOffsetX = 1;
-        ctx.shadowOffsetY = 1;
-        
-        ctx.fillText(state.watermark.text, x, y);
-        
-        // Reset shadow
-        ctx.shadowColor = 'transparent';
-        ctx.shadowBlur = 0;
-        ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 0;
-    } else if (state.watermark.type === 'image' && state.watermark.imageUrl) {
-        // Image watermark
-        const img = new Image();
-        await new Promise((resolve) => {
-            img.onload = resolve;
-            img.src = state.watermark.imageUrl;
-        });
-        
-        // Calculate scaled dimensions
-        const scale = state.watermark.scale / 100;
-        const imgWidth = img.width * scale;
-        const imgHeight = img.height * scale;
-        
-        let x, y;
-        const padding = 10;
-        
-        switch(state.watermark.position) {
-            case 'bottom-right':
-                x = width - imgWidth - padding;
-                y = height - imgHeight - padding;
-                break;
-            case 'bottom-left':
-                x = padding;
-                y = height - imgHeight - padding;
-                break;
-            case 'top-right':
-                x = width - imgWidth - padding;
-                y = padding;
-                break;
-            case 'top-left':
-                x = padding;
-                y = padding;
-                break;
-            case 'center':
-                x = (width - imgWidth) / 2;
-                y = (height - imgHeight) / 2;
-                break;
-        }
-        
-        ctx.globalAlpha = state.watermark.opacity / 100;
-        ctx.drawImage(img, x, y, imgWidth, imgHeight);
-    }
-    
-    ctx.globalAlpha = 1.0;
-}
-
-// Remove metadata from image
-async function removeMetadata(blob) {
-    try {
-        // Use a simple approach - redraw image to strip metadata
-        const img = new Image();
-        await new Promise((resolve, reject) => {
-            img.onload = resolve;
-            img.onerror = reject;
-            img.src = URL.createObjectURL(blob);
-        });
-        
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0);
-        
-        return new Promise(resolve => {
-            canvas.toBlob(resolve, blob.type);
-        });
-    } catch (error) {
-        console.error("Error removing metadata:", error);
-        return blob; // Return original if failed
-    }
-}
-
-// Update stats
-function updateStats() {
-    if (state.optimizedFiles.length === 0) return;
-    
-    let totalOriginal = 0;
-    let totalOptimized = 0;
-    
-    state.optimizedFiles.forEach(file => {
-        totalOriginal += file.stats.originalSize;
-        totalOptimized += file.stats.optimizedSize;
-    });
-    
-    const totalSavings = totalOriginal - totalOptimized;
-    const percentage = ((totalSavings / totalOriginal) * 100).toFixed(1);
-    
-    elements.stats.innerHTML = `
-        <div class="stat">
-            <span class="stat-label">Original:</span>
-            <span class="stat-value">${formatFileSize(totalOriginal)}</span>
-        </div>
-        <div class="stat">
-            <span class="stat-label">Optimized:</span>
-            <span class="stat-value">${formatFileSize(totalOptimized)}</span>
-        </div>
-        <div class="stat savings">
-            <span class="stat-label">Saved:</span>
-            <span class="stat-value">${formatFileSize(totalSavings)} (${percentage}%)</span>
-        </div>
-    `;
-    
-    elements.stats.style.display = 'block';
-}
-
-// Format file size
-function formatFileSize(bytes) {
-    if (bytes === 0) return '0 Bytes';
-    
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-}
-
-// Download optimized images
-function downloadOptimized() {
-    if (state.optimizedFiles.length === 0) return;
-    
-    if (state.optimizedFiles.length === 1) {
-        // Single file download
-        const file = state.optimizedFiles[0].optimized;
-        const url = URL.createObjectURL(file);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = file.name;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-    } else {
-        // Multiple files - create zip
-        showToast('Preparing download...');
-        
-        const zip = new JSZip();
-        state.optimizedFiles.forEach(file => {
-            zip.file(file.optimized.name, file.optimized);
-        });
-        
-        zip.generateAsync({ type: 'blob' })
-            .then(content => {
-                const url = URL.createObjectURL(content);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'optimized_images.zip';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-                showToast('Download started!');
-            })
-            .catch(error => {
-                console.error('Error creating zip:', error);
-                showToast('Error creating download');
-            });
-    }
-}
-
-// Add to history
-function addToHistory() {
-    const historyItem = {
-        date: new Date().toISOString(),
-        files: state.optimizedFiles.map(file => ({
-            originalName: file.original.name,
-            optimizedName: file.optimized.name,
-            originalSize: file.stats.originalSize,
-            optimizedSize: file.stats.optimizedSize,
-            savings: file.stats.savings
-        })),
-        totalSavings: state.optimizedFiles.reduce((sum, file) => sum + file.stats.savings, 0)
-    };
-    
-    state.history.unshift(historyItem);
-    if (state.history.length > 50) {
-        state.history.pop();
-    }
-    
-    localStorage.setItem('imageopt-history', JSON.stringify(state.history));
-    renderHistory();
-}
-
-// Render history
-function renderHistory() {
-    elements.historyList.innerHTML = '';
-    
-    state.history.forEach((item, index) => {
-        const li = document.createElement('li');
-        li.className = 'history-item';
-        
-        const date = new Date(item.date).toLocaleString();
-        const totalSavings = formatFileSize(item.totalSavings);
-        
-        li.innerHTML = `
-            <div class="history-header">
-                <span class="history-date">${date}</span>
-                <span class="history-savings">Saved: ${totalSavings}</span>
-            </div>
-            <div class="history-files">${item.files.length} files processed</div>
-            <button class="history-delete" data-index="${index}">
-                <i class="fas fa-trash"></i>
-            </button>
-        `;
-        
-        li.querySelector('.history-delete').addEventListener('click', (e) => {
-            e.stopPropagation();
-            state.history.splice(index, 1);
-            localStorage.setItem('imageopt-history', JSON.stringify(state.history));
-            renderHistory();
-        });
-        
-        elements.historyList.appendChild(li);
-    });
-}
-
-// Reset everything
-function reset() {
-    state.originalFiles = [];
-    state.optimizedFiles = [];
-    state.currentFileIndex = 0;
-    
-    resetEditState();
-    
-    elements.filePreviews.innerHTML = '';
-    elements.previewImage.src = '';
-    elements.stats.style.display = 'none';
-    elements.downloadBtn.style.display = 'none';
-    elements.editorContainer.style.display = 'none';
-    
-    elements.fileInput.value = '';
+// Show edit notification
+function showEditNotification(message) {
+    elements.editNotification.textContent = message || 'Changes applied!';
+    elements.editNotification.style.display = 'block';
+    setTimeout(() => {
+        elements.editNotification.style.display = 'none';
+    }, 3000);
 }
 
 // Toggle adjust panel
 function toggleAdjustPanel() {
-    if (!checkFeatureAccess('basicEditing')) {
-        showPremiumRequiredModal('basicEditing');
-        return;
-    }
-    
     elements.adjustControls.style.display = 
-        elements.adjustControls.style.display === 'block' ? 'none' : 'block';
+        elements.adjustControls.style.display === 'grid' ? 'none' : 'grid';
 }
 
-// Update brightness value display
+// Update brightness value
 function updateBrightnessValue() {
     state.adjustments.brightness = parseInt(elements.brightnessRange.value);
     elements.brightnessValue.textContent = `${state.adjustments.brightness}%`;
     applyPreviewAdjustments();
 }
 
-// Update contrast value display
+// Update contrast value
 function updateContrastValue() {
     state.adjustments.contrast = parseInt(elements.contrastRange.value);
     elements.contrastValue.textContent = `${state.adjustments.contrast}%`;
     applyPreviewAdjustments();
 }
 
-// Update saturation value display
+// Update saturation value
 function updateSaturationValue() {
     state.adjustments.saturation = parseInt(elements.saturationRange.value);
     elements.saturationValue.textContent = `${state.adjustments.saturation}%`;
     applyPreviewAdjustments();
 }
 
-// Update sharpness value display
+// Update sharpness value
 function updateSharpnessValue() {
     state.adjustments.sharpness = parseInt(elements.sharpnessRange.value);
     elements.sharpnessValue.textContent = `${state.adjustments.sharpness}%`;
     applyPreviewAdjustments();
 }
 
-// Update temperature value display
+// Update temperature value
 function updateTemperatureValue() {
     state.adjustments.temperature = parseInt(elements.temperatureRange.value);
     elements.temperatureValue.textContent = `${state.adjustments.temperature}%`;
@@ -1959,23 +1402,23 @@ function updateTemperatureValue() {
 
 // Apply adjustments to preview
 function applyPreviewAdjustments() {
-    const filters = [
-        `brightness(${(state.adjustments.brightness + 100) / 100})`,
-        `contrast(${(state.adjustments.contrast + 100) / 100})`,
-        `saturate(${(state.adjustments.saturation + 100) / 100})`,
-        state.adjustments.temperature !== 0 ? 
-            `hue-rotate(${state.adjustments.temperature > 0 ? 
-                state.adjustments.temperature * 0.36 : 
-                state.adjustments.temperature * 0.72}deg)` : ''
-    ].filter(Boolean).join(' ');
+    // Инвертируем значение резкости: больше sharpness = меньше размытия
+    const sharpnessValue = (100 - state.adjustments.sharpness) / 100;
     
-    elements.previewImage.style.filter = filters;
+    let filter = `
+        brightness(${100 + state.adjustments.brightness}%)
+        contrast(${100 + state.adjustments.contrast}%)
+        saturate(${100 + state.adjustments.saturation}%)
+        blur(${Math.max(0, sharpnessValue * 0.5)}px)
+    `;
+    
+    elements.previewImage.style.filter = filter;
 }
 
-// Apply adjustments permanently
+// Apply adjustments
 function applyAdjustments() {
-    showEditNotification('Adjustments applied!');
     elements.adjustControls.style.display = 'none';
+    showEditNotification('Adjustments applied!');
 }
 
 // Reset adjustments
@@ -1988,23 +1431,681 @@ function resetAdjustments() {
         temperature: 0
     };
     
-    applyAdjustmentsToControls();
-    applyPreviewAdjustments();
+    elements.brightnessRange.value = 0;
+    elements.contrastRange.value = 0;
+    elements.saturationRange.value = 0;
+    elements.sharpnessRange.value = 0;
+    elements.temperatureRange.value = 0;
+    
+    elements.brightnessValue.textContent = '0%';
+    elements.contrastValue.textContent = '0%';
+    elements.saturationValue.textContent = '0%';
+    elements.sharpnessValue.textContent = '0%';
+    elements.temperatureValue.textContent = '0%';
+    
+    elements.previewImage.style.filter = 'none';
     showEditNotification('Adjustments reset!');
 }
 
-// Initialize when DOM is loaded
-document.addEventListener('DOMContentLoaded', init);
+// Process images
+async function processImages() {
+    if (state.originalFiles.length === 0) {
+        showToast("Please upload images first!");
+        return;
+    }
 
-// Service Worker registration
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
-            .then(registration => {
-                console.log('SW registered: ', registration);
-            })
-            .catch(registrationError => {
-                console.log('SW registration failed: ', registrationError);
-            });
+    // Free user limitations
+    if (!state.isPremium) {
+        const today = new Date().toDateString();
+        // Reset daily counter if new day
+        if (state.lastProcessDate !== today) {
+            state.dailyCount = 0;
+            state.lastProcessDate = today;
+        }
+
+        // Check daily limit
+        if (state.dailyCount >= FREE_LIMITS.DAILY) {
+            showToast(`Daily limit reached (${FREE_LIMITS.DAILY} images). Try tomorrow or upgrade to Premium.`);
+            
+            // Show upgrade button
+            const upgradeBtn = document.createElement('button');
+            upgradeBtn.textContent = 'Upgrade to Premium';
+            upgradeBtn.className = 'btn-premium';
+            upgradeBtn.style.marginTop = '15px';
+            upgradeBtn.style.padding = '10px 20px';
+            upgradeBtn.style.fontSize = '1rem';
+            
+            upgradeBtn.onclick = () => {
+                if (!state.user || state.user.uid === "guest") {
+                    window.location.href = 'auth.html';
+                } else {
+                    window.location.href = 'pay.html';
+                }
+            };
+            
+            showToast(`Daily limit reached!`, 5000);
+            elements.processing.innerHTML = `
+                <div style="text-align: center; padding: 20px;">
+                    <p style="margin-bottom: 20px; font-size: 1.2rem;">
+                        Daily limit reached (${FREE_LIMITS.DAILY} images)
+                    </p>
+                    <p style="margin-bottom: 20px;">
+                        Upgrade to Premium for unlimited processing
+                    </p>
+                </div>
+            `;
+            elements.processing.appendChild(upgradeBtn);
+            elements.processing.style.display = 'block';
+            return;
+        }
+
+        // Check batch size
+        if (state.originalFiles.length > FREE_LIMITS.PER_BATCH) {
+            showToast(`Free version: max ${FREE_LIMITS.PER_BATCH} files at once`);
+            return;
+        }
+
+        // Check file size
+        const oversizedFiles = state.originalFiles.filter(file => file.size > FREE_LIMITS.MAX_SIZE);
+        if (oversizedFiles.length > 0) {
+            showToast(`Free version: max file size ${formatFileSize(FREE_LIMITS.MAX_SIZE)}`);
+            return;
+        }
+    }
+
+    elements.processing.style.display = 'block';
+    elements.previewSection.style.display = 'none';
+    state.optimizedFiles = [];
+
+    const quality = parseInt(elements.qualityRange.value) / 100;
+    const format = elements.formatSelect.value;
+    const maxWidth = elements.maxWidthSelect.value ? parseInt(elements.maxWidthSelect.value) : null;
+
+    // Process files sequentially
+    for (let i = 0; i < state.originalFiles.length; i++) {
+        const applyEdits = state.batchEditMode === 'all' || 
+                          (state.batchEditMode === 'single' && i === state.currentFileIndex);
+
+        try {
+            const optimizedFile = await optimizeImage(
+                state.originalFiles[i], 
+                quality, 
+                format, 
+                maxWidth, 
+                applyEdits,
+                i
+            );
+            state.optimizedFiles[i] = optimizedFile;
+            
+            // Update progress
+            const progress = Math.round(((i + 1) / state.originalFiles.length) * 100);
+            elements.progressText.textContent = `${progress}%`;
+            elements.progressBar.style.width = `${progress}%`;
+            
+            // Small delay to show progress
+            await new Promise(resolve => setTimeout(resolve, 100));
+        } catch (error) {
+            console.error('Error processing file:', error);
+            showToast(`Error processing ${state.originalFiles[i].name}: ${error.message || error}`, 5000);
+        }
+    }
+
+    // Update daily counter for free users
+    if (!state.isPremium) {
+        state.dailyCount += state.originalFiles.length;
+        localStorage.setItem('dailyCount', state.dailyCount);
+        localStorage.setItem('lastProcessDate', new Date().toDateString());
+        updateDailyCounter();
+    }
+
+    displayResults();
+    saveToHistory();
+    elements.processing.style.display = 'none';
+    elements.previewSection.style.display = 'block';
+    showToast('Optimization completed!');
+}
+
+// Optimize image
+function optimizeImage(file, quality, format, maxWidth, applyEdits, index) {
+    return new Promise((resolve, reject) => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const img = new Image();
+
+        img.onload = async () => {
+            let { width, height } = img;
+            
+            // Step 1: Draw the image on canvas (without any transformations)
+            canvas.width = width;
+            canvas.height = height;
+            ctx.drawImage(img, 0, 0, width, height);
+
+            // Step 2: Apply edits if needed
+            if (applyEdits) {
+                // Apply rotation and flip
+                if (state.rotation !== 0 || state.flipHorizontal) {
+                    // Clear the canvas and redraw with transformations
+                    const tempCanvas = document.createElement('canvas');
+                    const tempCtx = tempCanvas.getContext('2d');
+                    
+                    // For rotation, adjust canvas size if needed
+                    if (state.rotation === 90 || state.rotation === 270) {
+                        [width, height] = [height, width];
+                    }
+                    
+                    tempCanvas.width = width;
+                    tempCanvas.height = height;
+                    
+                    // Apply transformations
+                    tempCtx.translate(width / 2, height / 2);
+                    tempCtx.rotate(state.rotation * Math.PI / 180);
+                    if (state.flipHorizontal) {
+                        tempCtx.scale(-1, 1);
+                    }
+                    tempCtx.translate(-img.width / 2, -img.height / 2);
+                    tempCtx.drawImage(img, 0, 0);
+                    
+                    // Copy back to the main canvas
+                    canvas.width = width;
+                    canvas.height = height;
+                    ctx.drawImage(tempCanvas, 0, 0);
+                }
+
+                // Apply adjustments (brightness, contrast, etc.)
+                if (state.adjustments.brightness !== 0 || 
+                    state.adjustments.contrast !== 0 || 
+                    state.adjustments.saturation !== 0 ||
+                    state.adjustments.sharpness !== 0 ||
+                    state.adjustments.temperature !== 0) {
+                    
+                    // Create temporary canvas for applying filters
+                    const tempCanvas = document.createElement('canvas');
+                    const tempCtx = tempCanvas.getContext('2d');
+                    tempCanvas.width = canvas.width;
+                    tempCanvas.height = canvas.height;
+                    
+                    // Apply filters
+                    tempCtx.filter = `
+                        brightness(${100 + state.adjustments.brightness}%)
+                        contrast(${100 + state.adjustments.contrast}%)
+                        saturate(${100 + state.adjustments.saturation}%)
+                        blur(${Math.max(0, 0.5 - state.adjustments.sharpness/200)}px)
+                    `;
+                    
+                    // Apply temperature
+                    if (state.adjustments.temperature !== 0) {
+                        const tempValue = state.adjustments.temperature / 100;
+                        tempCtx.filter += ` sepia(${Math.abs(tempValue)*30}%) hue-rotate(${-tempValue*30}deg)`;
+                    }
+                    
+                    tempCtx.drawImage(canvas, 0, 0);
+                    
+                    // Copy back
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(tempCanvas, 0, 0);
+                }
+
+                // Apply watermark if enabled
+                if (state.watermark.enabled) {
+                    applyWatermark(ctx, canvas);
+                }
+            }
+
+            // Step 3: Resize if needed
+            if (maxWidth && canvas.width > maxWidth) {
+                const newHeight = (canvas.height * maxWidth) / canvas.width;
+                const tempCanvas = document.createElement('canvas');
+                const tempCtx = tempCanvas.getContext('2d');
+                
+                tempCanvas.width = maxWidth;
+                tempCanvas.height = newHeight;
+                tempCtx.drawImage(canvas, 0, 0, maxWidth, newHeight);
+                
+                canvas.width = maxWidth;
+                canvas.height = newHeight;
+                ctx.drawImage(tempCanvas, 0, 0);
+            }
+
+            // Step 4: Format conversion
+            // For HEIC format
+            if (format === 'heic') {
+                try {
+                    if (!state.heicSupported) {
+                        throw new Error("HEIC conversion not supported");
+                    }
+                    
+                    // Get JPEG blob first
+                    const jpegBlob = await new Promise(resolve => 
+                        canvas.toBlob(resolve, 'image/jpeg', quality)
+                    );
+                    
+                    // Convert JPEG to HEIC
+                    const heicBlob = await heic2any({
+                        blob: jpegBlob,
+                        toType: 'image/heic',
+                        quality: quality
+                    });
+                    
+                    const optimizedFile = new File(
+                        [heicBlob],
+                        file.name.replace(/\.[^/.]+$/, '.heic'),
+                        { type: 'image/heic' }
+                    );
+                    resolve(optimizedFile);
+                } catch (error) {
+                    reject(error);
+                }
+            } 
+            // For AVIF format
+            else if (format === 'avif') {
+                try {
+                    // Try to create AVIF blob
+                    const blob = await new Promise(resolve => 
+                        canvas.toBlob(resolve, 'image/avif', quality)
+                    );
+                    
+                    if (!blob) {
+                        throw new Error("Failed to create AVIF image");
+                    }
+                    
+                    const optimizedFile = new File(
+                        [blob],
+                        file.name.replace(/\.[^/.]+$/, '.avif'),
+                        { type: 'image/avif' }
+                    );
+                    resolve(optimizedFile);
+                } catch (error) {
+                    reject(error);
+                }
+            }
+            // For TIFF format
+            else if (format === 'tiff') {
+                try {
+                    if (typeof Tiff === 'undefined') {
+                        throw new Error("TIFF conversion requires libtiff.js");
+                    }
+                    const tiffBlob = await convertToTiff(canvas);
+                    const optimizedFile = new File(
+                        [tiffBlob],
+                        file.name.replace(/\.[^/.]+$/, '.tiff'),
+                        { type: 'image/tiff' }
+                    );
+                    resolve(optimizedFile);
+                } catch (error) {
+                    reject(error);
+                }
+            }
+            // For other formats
+            else {
+                try {
+                    // For progressive JPEG
+                    const jpegOptions = {};
+                    if (format === 'jpeg' && state.progressiveJpeg) {
+                        jpegOptions.progressive = true;
+                    }
+                    
+                    canvas.toBlob((blob) => {
+                        if (!blob) {
+                            reject(new Error("Failed to create image"));
+                            return;
+                        }
+                        const optimizedFile = new File([blob], 
+                            file.name.replace(/\.[^/.]+$/, `.${format === 'jpeg' ? 'jpg' : format}`), 
+                            { type: `image/${format}` }
+                        );
+                        resolve(optimizedFile);
+                    }, `image/${format}`, quality, jpegOptions);
+                } catch (e) {
+                    reject(e);
+                }
+            }
+        };
+
+        img.onerror = () => {
+            reject(new Error("Error loading image"));
+        };
+
+        img.src = URL.createObjectURL(file);
     });
+}
+
+// Convert canvas to TIFF using libtiff.js
+async function convertToTiff(canvas) {
+    if (typeof Tiff === 'undefined') {
+        throw new Error("TIFF library not loaded");
+    }
+    const ctx = canvas.getContext('2d');
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const tiff = new Tiff({
+        width: canvas.width,
+        height: canvas.height
+    });
+    tiff.setRGBAImage(imageData.data);
+    return new Blob([tiff.toArrayBuffer()], { type: 'image/tiff' });
+}
+
+// Apply watermark
+function applyWatermark(ctx, canvas) {
+    ctx.save();
+    ctx.globalAlpha = state.watermark.opacity / 100;
+    
+    if (state.watermark.type === 'text') {
+        ctx.font = `bold ${state.watermark.size}px Arial`;
+        ctx.fillStyle = state.watermark.color;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        const text = state.watermark.text;
+        const textMetrics = ctx.measureText(text);
+        const textWidth = textMetrics.width;
+        const textHeight = state.watermark.size;
+        
+        let x, y;
+        
+        switch(state.watermark.position) {
+            case 'bottom-right':
+                x = canvas.width - textWidth / 2 - 20;
+                y = canvas.height - textHeight / 2 - 20;
+                break;
+            case 'bottom-left':
+                x = textWidth / 2 + 20;
+                y = canvas.height - textHeight / 2 - 20;
+                break;
+            case 'top-right':
+                x = canvas.width - textWidth / 2 - 20;
+                y = textHeight / 2 + 20;
+                break;
+            case 'top-left':
+                x = textWidth / 2 + 20;
+                y = textHeight / 2 + 20;
+                break;
+            case 'center':
+                x = canvas.width / 2;
+                y = canvas.height / 2;
+                break;
+        }
+        
+        // Add shadow for better readability
+        ctx.shadowColor = 'rgba(0,0,0,0.5)';
+        ctx.shadowBlur = 5;
+        ctx.shadowOffsetX = 2;
+        ctx.shadowOffsetY = 2;
+        
+        ctx.fillText(text, x, y);
+    } else if (state.watermark.imageUrl) {
+        const img = new Image();
+        img.src = state.watermark.imageUrl;
+        
+        // Рассчитываем размеры с учетом масштаба
+        const scale = state.watermark.scale / 100;
+        const width = canvas.width * scale;
+        const height = (img.height / img.width) * width;
+        
+        let x, y;
+        
+        switch(state.watermark.position) {
+            case 'bottom-right':
+                x = canvas.width - width - 20;
+                y = canvas.height - height - 20;
+                break;
+            case 'bottom-left':
+                x = 20;
+                y = canvas.height - height - 20;
+                break;
+            case 'top-right':
+                x = canvas.width - width - 20;
+                y = 20;
+                break;
+            case 'top-left':
+                x = 20;
+                y = 20;
+                break;
+            case 'center':
+                x = (canvas.width - width) / 2;
+                y = (canvas.height - height) / 2;
+                break;
+        }
+        
+        ctx.drawImage(img, x, y, width, height);
+    }
+    
+    ctx.restore();
+}
+
+// Display results
+function displayResults() {
+    elements.previewContainer.innerHTML = '';
+    elements.stats.innerHTML = '';
+
+    let totalOriginalSize = 0;
+    let totalOptimizedSize = 0;
+
+    state.originalFiles.forEach((originalFile, index) => {
+        const optimizedFile = state.optimizedFiles[index];
+        if (!optimizedFile) return;
+        
+        totalOriginalSize += originalFile.size;
+        totalOptimizedSize += optimizedFile.size;
+
+        const previewItem = document.createElement('div');
+        previewItem.className = 'preview-item';
+        
+        const originalUrl = URL.createObjectURL(originalFile);
+        const optimizedUrl = URL.createObjectURL(optimizedFile);
+
+        previewItem.innerHTML = `
+            <h3><i class="fas fa-file-image"></i> Original</h3>
+            <img src="${originalUrl}" alt="Original">
+            <div class="file-info">
+                <div><strong>${originalFile.name}</strong></div>
+                <div>Size: ${formatFileSize(originalFile.size)}</div>
+            </div>
+        `;
+
+        const optimizedItem = document.createElement('div');
+        optimizedItem.className = 'preview-item';
+        optimizedItem.innerHTML = `
+            <h3><i class="fas fa-bolt"></i> Optimized</h3>
+            <img src="${optimizedUrl}" alt="Optimized">
+            <div class="file-info">
+                <div><strong>${optimizedFile.name}</strong></div>
+                <div>Size: ${formatFileSize(optimizedFile.size)}</div>
+                <div>Savings: ${Math.round((1 - optimizedFile.size / originalFile.size) * 100)}%</div>
+            </div>
+        `;
+
+        elements.previewContainer.appendChild(previewItem);
+        elements.previewContainer.appendChild(optimizedItem);
+    });
+
+    // Display stats
+    if (state.originalFiles.length > 0) {
+        const compressionRatio = Math.round((1 - totalOptimizedSize / totalOriginalSize) * 100);
+        const savings = formatFileSize(totalOriginalSize - totalOptimizedSize);
+        
+        elements.stats.innerHTML = `
+            <div class="stat-item">
+                <div class="stat-value">${state.originalFiles.length}</div>
+                <div class="stat-label">Files</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">${formatFileSize(totalOriginalSize)}</div>
+                <div class="stat-label">Original Size</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">${formatFileSize(totalOptimizedSize)}</div>
+                <div class="stat-label">Optimized Size</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">${compressionRatio}%</div>
+                <div class="stat-label">Savings</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">${savings}</div>
+                <div class="stat-label">Saved</div>
+            </div>
+        `;
+    }
+
+    elements.downloadBtn.disabled = false;
+}
+
+// Format file size
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+// Download optimized images
+async function downloadOptimized() {
+    if (state.optimizedFiles.length === 0) {
+        showToast("Optimize images first!");
+        return;
+    }
+
+    if (state.optimizedFiles.length === 1) {
+        // Single file download
+        const url = URL.createObjectURL(state.optimizedFiles[0]);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = state.optimizedFiles[0].name;
+        a.click();
+        URL.revokeObjectURL(url);
+    } else {
+        // Multiple files - create zip
+        try {
+            const zip = new JSZip();
+            const folder = zip.folder("optimized_images");
+            
+            state.optimizedFiles.forEach(file => {
+                folder.file(file.name, file);
+            });
+            
+            const content = await zip.generateAsync({type:"blob"});
+            saveAs(content, "optimized_images.zip");
+        } catch (error) {
+            alert('For multiple files, please right-click each image and select "Save image as..."');
+        }
+    }
+}
+
+// Reset application
+function reset() {
+    state.originalFiles = [];
+    state.optimizedFiles = [];
+    elements.fileInput.value = '';
+    elements.filePreviews.innerHTML = '';
+    elements.previewSection.style.display = 'none';
+    elements.processing.style.display = 'none';
+    elements.downloadBtn.disabled = true;
+    elements.editorContainer.style.display = 'none';
+    resetEditState();
+    elements.progressBar.style.width = '0%';
+    elements.progressText.textContent = '0%';
+}
+
+// Save to history
+function saveToHistory() {
+    if (state.originalFiles.length === 0) return;
+    
+    const historyItem = {
+        id: Date.now(),
+        date: new Date().toLocaleString(),
+        fileCount: state.originalFiles.length,
+        originalSize: state.originalFiles.reduce((sum, file) => sum + file.size, 0),
+        optimizedSize: state.optimizedFiles.reduce((sum, file) => sum + file.size, 0),
+        settings: {
+            quality: elements.qualityRange.value,
+            format: elements.formatSelect.value,
+            maxWidth: elements.maxWidthSelect.value,
+            adjustments: state.adjustments
+        }
+    };
+    
+    // Add to beginning of history
+    state.history.unshift(historyItem);
+    
+    // Keep only last 10 items
+    if (state.history.length > 10) {
+        state.history.pop();
+    }
+    
+    // Save to localStorage
+    localStorage.setItem('imageopt-history', JSON.stringify(state.history));
+    
+    // Save to Firebase
+    if (state.firebaseInitialized && state.user && state.user.uid !== "guest") {
+        state.db.collection("optimizations").add({
+            userId: state.user.uid,
+            ...historyItem,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        })
+        .catch(error => console.error("Save error:", error));
+    }
+    
+    // Update UI
+    renderHistory();
+}
+
+// Render history
+function renderHistory() {
+    elements.historyList.innerHTML = '';
+    
+    if (state.history.length === 0) {
+        elements.historyList.innerHTML = '<p style="text-align: center; padding: 20px; color: var(--gray);">History is empty</p>';
+        return;
+    }
+    
+    state.history.forEach(item => {
+        const historyItem = document.createElement('div');
+        historyItem.className = 'history-item';
+        historyItem.dataset.id = item.id;
+        
+        const savings = Math.round((1 - item.optimizedSize / item.originalSize) * 100);
+        
+        historyItem.innerHTML = `
+            <h4>Processing <span>${item.date}</span></h4>
+            <div class="history-stats">
+                <div>Files: ${item.fileCount}</div>
+                <div>Savings: ${savings}%</div>
+            </div>
+        `;
+        
+        historyItem.addEventListener('click', () => loadFromHistory(item.id));
+        elements.historyList.appendChild(historyItem);
+    });
+}
+
+// Load from history
+function loadFromHistory(id) {
+    const item = state.history.find(item => item.id == id);
+    if (!item) return;
+    
+    // Apply settings
+    elements.qualityRange.value = item.settings.quality;
+    updateQualityValue();
+    elements.formatSelect.value = item.settings.format;
+    elements.maxWidthSelect.value = item.settings.maxWidth;
+    
+    // Apply adjustments if available
+    if (item.settings.adjustments) {
+        state.adjustments = {...item.settings.adjustments};
+        applyAdjustmentsToControls();
+    }
+    
+    // Close history panel
+    elements.historyPanel.classList.remove('active');
+    
+    // Show notification
+    showToast(`Settings from ${item.date} applied!`);
+}
+
+// Initialize app when DOM is loaded
+if (document.readyState !== 'loading') {
+    init();
+} else {
+    document.addEventListener('DOMContentLoaded', init);
 }
