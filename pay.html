@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Upgrade to Premium - Image PixMizer</title>
-  <script src="https://www.sandbox.paypal.com/sdk/js?client-id=ATnZIAG3susq8624ujWJL8C5iu3D_1C6lQeYkuESE8VE_v7qonBxxeSFICHlY3dOq9XQD8GwAHne2Uwf&currency=USD"></script>
+  <script src="https://www.paypal.com/sdk/js?client-id=ATnZIAG3susq8624ujWJL8C5iu3D_1C6lQeYkuESE8VE_v7qonBxxeSFICHlY3dOq9XQD8GwAHne2Uwf&currency=USD"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
@@ -151,13 +151,6 @@
     
     .premium .price {
       color: #ffd700;
-    }
-    
-    .price-note {
-      font-size: 1rem;
-      color: #14ffec;
-      margin-top: -15px;
-      margin-bottom: 20px;
     }
     
     .features {
@@ -458,59 +451,40 @@
     </div>
     
     <div class="plans">
-      <div class="plan">
-        <h2>Basic</h2>
-        <div class="price">Free</div>
-        <ul class="features">
-          <li><i class="fas fa-check"></i> Process up to 15 images per day</li>
-          <li><i class="fas fa-check"></i> Max file size: 7MB</li>
-          <li><i class="fas fa-check"></i> Basic quality settings</li>
-          <li><i class="fas fa-check"></i> JPG, PNG, WebP formats</li>
-          <li><i class="fas fa-check"></i> Basic editing tools</li>
-          <li><i class="fas fa-times"></i> Advanced editing features</li>
-          <li><i class="fas fa-times"></i> PDF tools</li>
-          <li><i class="fas fa-times"></i> Priority support</li>
-        </ul>
-      </div>
-      
-      <div class="plan premium">
-        <div class="recommended-badge pulse">
-          <i class="fas fa-star"></i> Recommended
-        </div>
-        <h2>Monthly Premium</h2>
-        <div class="price">$9/mo</div>
-        <ul class="features">
-          <li><i class="fas fa-check"></i> Unlimited image processing</li>
-          <li><i class="fas fa-check"></i> Max file size: 50MB</li>
-          <li><i class="fas fa-check"></i> Advanced quality settings</li>
-          <li><i class="fas fa-check"></i> All formats: JPG, PNG, WebP, AVIF, HEIC, TIFF</li>
-          <li><i class="fas fa-check"></i> Full editing suite</li>
-          <li><i class="fas fa-check"></i> Complete PDF tools (create, edit, compress)</li>
-          <li><i class="fas fa-check"></i> Batch processing & advanced features</li>
-          <li><i class="fas fa-check"></i> Priority support</li>
-          <li><i class="fas fa-check"></i> 30-day money-back guarantee</li>
-        </ul>
-        <div id="paypalContainerMonthly"></div>
-      </div>
-
-      <div class="plan premium">
-        <div class="recommended-badge pulse">
-          <i class="fas fa-star"></i> Best Value
-        </div>
-        <h2>Yearly Premium</h2>
-        <div class="price">$60/yr</div>
-        <div class="price-note">Save $48 compared to monthly</div>
-        <ul class="features">
-          <li><i class="fas fa-check"></i> Everything in Monthly Premium</li>
-          <li><i class="fas fa-check"></i> 40% discount compared to monthly</li>
-          <li><i class="fas fa-check"></i> Priority customer support</li>
-          <li><i class="fas fa-check"></i> Early access to new features</li>
-          <li><i class="fas fa-check"></i> Exclusive editing tools</li>
-          <li><i class="fas fa-check"></i> 60-day money-back guarantee</li>
-        </ul>
-        <div id="paypalContainerYearly"></div>
-      </div>
+  <div class="plan">
+    <h2>Basic</h2>
+    <div class="price">Free</div>
+    <ul class="features">
+      <li><i class="fas fa-check"></i> Process up to 15 images per day</li>
+      <li><i class="fas fa-check"></i> Max file size: 7MB</li>
+      <li><i class="fas fa-check"></i> Basic quality settings</li>
+      <li><i class="fas fa-check"></i> JPG, PNG, WebP formats</li>
+      <li><i class="fas fa-check"></i> Basic editing tools</li>
+      <li><i class="fas fa-times"></i> Advanced editing features</li>
+      <li><i class="fas fa-times"></i> PDF tools</li>
+      <li><i class="fas fa-times"></i> Priority support</li>
+    </ul>
+  </div>
+  
+  <div class="plan premium">
+    <div class="recommended-badge pulse">
+      <i class="fas fa-star"></i> Recommended
     </div>
+    <h2>Premium</h2>
+    <div class="price">$4.99/mo</div>
+    <ul class="features">
+      <li><i class="fas fa-check"></i> Unlimited image processing</li>
+      <li><i class="fas fa-check"></i> Max file size: 50MB</li>
+      <li><i class="fas fa-check"></i> Advanced quality settings</li>
+      <li><i class="fas fa-check"></i> All formats: JPG, PNG, WebP, AVIF, HEIC, TIFF</li>
+      <li><i class="fas fa-check"></i> Full editing suite</li>
+      <li><i class="fas fa-check"></i> Complete PDF tools (create, edit, compress)</li>
+      <li><i class="fas fa-check"></i> Batch processing & advanced features</li>
+      <li><i class="fas fa-check"></i> Priority support</li>
+      <li><i class="fas fa-check"></i> 30-day money-back guarantee</li>
+    </ul>
+  </div>
+</div>
     
     <div class="payment-container">
       <h2>Secure Payment</h2>
@@ -567,13 +541,13 @@
   <script>
     // Firebase configuration
     const firebaseConfig = {
-      apiKey: "AIzaSyCFt14JeU4qGlPScGGXnFdKRwZ8iV8oZQY",
-      authDomain: "image-pixmizer.firebaseapp.com",
-      projectId: "image-pixmizer",
-      storageBucket: "image-pixmizer.firebasestorage.app",
-      messagingSenderId: "310177828908",
-      appId: "1:310177828908:web:264aa42b38b5cbb50fc189"
-    };
+  apiKey: "AIzaSyCFt14JeU4qGlPScGGXnFdKRwZ8iV8oZQY",
+  authDomain: "image-pixmizer.firebaseapp.com",
+  projectId: "image-pixmizer",
+  storageBucket: "image-pixmizer.firebasestorage.app",
+  messagingSenderId: "310177828908",
+  appId: "1:310177828908:web:264aa42b38b5cbb50fc189"
+};
 
     // Initialize Firebase
     let app, auth, db;
@@ -586,9 +560,8 @@
     auth = firebase.auth();
     db = firebase.firestore();
 
-    // Initialize PayPal for both plans
+    // Initialize PayPal
     function initPayPal(user) {
-      // Monthly plan
       paypal.Buttons({
         style: {
           shape: 'pill',
@@ -602,145 +575,81 @@
           return actions.order.create({
             purchase_units: [{
               amount: {
-                value: '9.00',
+                value: '4.99',
                 currency_code: 'USD'
               },
-              description: 'ImageOpt Pro Monthly Subscription'
+              description: 'ImageOpt Pro Premium Subscription'
             }]
           });
         },
         onApprove: function(data, actions) {
-          return handlePaymentApproval(data, actions, 'monthly', user);
+          return actions.order.capture().then(async function(details) {
+            // Update user status
+            try {
+              // Используем set с merge вместо update
+              await db.collection('users').doc(user.uid).set({ 
+                premium: true,
+                premiumSince: firebase.firestore.Timestamp.now(),
+                paymentId: details.id,
+                email: user.email
+              }, { merge: true });
+
+              // Update localStorage
+              localStorage.setItem('premiumUser', 'true');
+              
+              // Show success message
+              document.getElementById('paypalContainer').innerHTML = `
+                <div style="text-align: center; padding: 30px;">
+                  <div class="float" style="font-size: 4rem; color: #14ffec; margin-bottom: 20px;">
+                    <i class="fas fa-check-circle"></i>
+                  </div>
+                  <h3 style="color: #fff; margin-bottom: 15px; font-size: 1.8rem;">
+                    Payment successful!
+                  </h3>
+                  <p style="margin-bottom: 30px; color: rgba(255, 255, 255, 0.8);">
+                    Your account has been upgraded to Premium. Redirecting...
+                  </p>
+                  <div class="loader"></div>
+                </div>
+              `;
+              
+              // Увеличиваем задержку до 5 секунд для гарантии обновления
+              setTimeout(() => {
+                window.location.href = 'index.html?t=' + Date.now();
+              }, 5000);
+            } catch (error) {
+              console.error('Error updating status:', error);
+              
+              // Записываем статус локально как временное решение
+              localStorage.setItem('premiumUser', 'true');
+              
+              // Показываем сообщение об ошибке
+              document.getElementById('paypalContainer').innerHTML = `
+                <div style="text-align: center; padding: 20px; color: #ffd700;">
+                  <i class="fas fa-exclamation-triangle" style="font-size: 3rem; margin-bottom: 15px;"></i>
+                  <h3 style="color: #fff; margin-bottom: 15px;">
+                    Account will update shortly. Redirecting...
+                  </h3>
+                  <div class="loader"></div>
+                </div>
+              `;
+              
+              setTimeout(() => {
+                window.location.href = 'index.html?t=' + Date.now();
+              }, 3000);
+            }
+          });
         },
         onError: function(err) {
           console.error('PayPal error:', err);
           showPaymentError('Payment error. Please try again');
         }
-      }).render('#paypalContainerMonthly');
-
-      // Yearly plan
-      paypal.Buttons({
-        style: {
-          shape: 'pill',
-          color: 'blue',
-          layout: 'vertical',
-          label: 'paypal',
-          height: 50,
-          tagline: false
-        },
-        createOrder: function(data, actions) {
-          return actions.order.create({
-            purchase_units: [{
-              amount: {
-                value: '60.00',
-                currency_code: 'USD'
-              },
-              description: 'ImageOpt Pro Yearly Subscription'
-            }]
-          });
-        },
-        onApprove: function(data, actions) {
-          return handlePaymentApproval(data, actions, 'yearly', user);
-        },
-        onError: function(err) {
-          console.error('PayPal error:', err);
-          showPaymentError('Payment error. Please try again');
-        }
-      }).render('#paypalContainerYearly');
-    }
-
-    // Handle payment approval for both plans
-    async function handlePaymentApproval(data, actions, planType, user) {
-      return actions.order.capture().then(async function(details) {
-        try {
-          // Calculate subscription end date
-          const subscriptionEnd = new Date();
-          if (planType === 'monthly') {
-            subscriptionEnd.setMonth(subscriptionEnd.getMonth() + 1);
-          } else {
-            subscriptionEnd.setFullYear(subscriptionEnd.getFullYear() + 1);
-          }
-
-          // Update user in Firestore
-          await db.collection('users').doc(user.uid).set({ 
-            premium: true,
-            premiumSince: firebase.firestore.Timestamp.now(),
-            subscriptionEnd: firebase.firestore.Timestamp.fromDate(subscriptionEnd),
-            planType: planType,
-            paymentId: details.id,
-            email: user.email
-          }, { merge: true });
-
-          // Update localStorage
-          localStorage.setItem('premiumUser', 'true');
-          localStorage.setItem('planType', planType);
-          localStorage.setItem('subscriptionEnd', subscriptionEnd.toISOString());
-          
-          // Show success message
-          document.getElementById('paypalContainerMonthly').innerHTML = '';
-          document.getElementById('paypalContainerYearly').innerHTML = `
-            <div style="text-align: center; padding: 30px;">
-              <div class="float" style="font-size: 4rem; color: #14ffec; margin-bottom: 20px;">
-                <i class="fas fa-check-circle"></i>
-              </div>
-              <h3 style="color: #fff; margin-bottom: 15px; font-size: 1.8rem;">
-                Payment successful!
-              </h3>
-              <p style="margin-bottom: 30px; color: rgba(255, 255, 255, 0.8);">
-                Your account has been upgraded to ${planType === 'monthly' ? 'Monthly' : 'Yearly'} Premium. Redirecting...
-              </p>
-              <div class="loader"></div>
-            </div>
-          `;
-          
-          setTimeout(() => {
-            window.location.href = 'index.html?t=' + Date.now();
-          }, 3000);
-        } catch (error) {
-          console.error('Error updating status:', error);
-          // Fallback to localStorage
-          localStorage.setItem('premiumUser', 'true');
-          localStorage.setItem('planType', planType);
-          
-          const subscriptionEnd = new Date();
-          if (planType === 'monthly') {
-            subscriptionEnd.setMonth(subscriptionEnd.getMonth() + 1);
-          } else {
-            subscriptionEnd.setFullYear(subscriptionEnd.getFullYear() + 1);
-          }
-          localStorage.setItem('subscriptionEnd', subscriptionEnd.toISOString());
-          
-          document.getElementById('paypalContainerMonthly').innerHTML = '';
-          document.getElementById('paypalContainerYearly').innerHTML = `
-            <div style="text-align: center; padding: 20px; color: #ffd700;">
-              <i class="fas fa-exclamation-triangle" style="font-size: 3rem; margin-bottom: 15px;"></i>
-              <h3 style="color: #fff; margin-bottom: 15px;">
-                Account will update shortly. Redirecting...
-              </h3>
-              <div class="loader"></div>
-            </div>
-          `;
-          
-          setTimeout(() => {
-            window.location.href = 'index.html?t=' + Date.now();
-          }, 3000);
-        }
-      });
+      }).render('#paypalContainer');
     }
 
     // Show payment error
     function showPaymentError(message) {
-      document.getElementById('paypalContainerMonthly').innerHTML = `
-        <div style="text-align: center; padding: 20px; color: #ff4d4d;">
-          <i class="fas fa-exclamation-triangle" style="font-size: 3rem; margin-bottom: 15px;"></i>
-          <h3 style="color: #fff; margin-bottom: 15px;">${message || 'Payment error'}</h3>
-          <button class="retry-btn" onclick="initPayPal(auth.currentUser)">
-            <i class="fas fa-redo"></i> Try Again
-          </button>
-        </div>
-      `;
-      
-      document.getElementById('paypalContainerYearly').innerHTML = `
+      document.getElementById('paypalContainer').innerHTML = `
         <div style="text-align: center; padding: 20px; color: #ff4d4d;">
           <i class="fas fa-exclamation-triangle" style="font-size: 3rem; margin-bottom: 15px;"></i>
           <h3 style="color: #fff; margin-bottom: 15px;">${message || 'Payment error'}</h3>
@@ -753,21 +662,7 @@
 
     // Show login prompt
     function showLoginPrompt() {
-      document.getElementById('paypalContainerMonthly').innerHTML = `
-        <div style="padding: 30px; text-align: center;">
-          <div style="font-size: 4rem; color: #14ffec; margin-bottom: 20px;">
-            <i class="fas fa-lock"></i>
-          </div>
-          <p style="font-size: 1.2rem; margin-bottom: 20px; color: rgba(255, 255, 255, 0.9);">
-            Please log in to upgrade to Premium
-          </p>
-          <button class="login-btn" onclick="window.location.href='auth.html'">
-            <i class="fas fa-sign-in-alt"></i> Log In
-          </button>
-        </div>
-      `;
-      
-      document.getElementById('paypalContainerYearly').innerHTML = `
+      document.getElementById('paypalContainer').innerHTML = `
         <div style="padding: 30px; text-align: center;">
           <div style="font-size: 4rem; color: #14ffec; margin-bottom: 20px;">
             <i class="fas fa-lock"></i>
@@ -800,8 +695,6 @@
       document.getElementById('logoutBtn').addEventListener('click', () => {
         auth.signOut().then(() => {
           localStorage.removeItem('premiumUser');
-          localStorage.removeItem('planType');
-          localStorage.removeItem('subscriptionEnd');
           window.location.href = 'auth.html';
         });
       });
