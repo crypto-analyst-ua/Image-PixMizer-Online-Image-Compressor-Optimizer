@@ -1519,3 +1519,10 @@ body {
     width: 100%;
     justify-content: center;
 }
+
+.price-note {
+  font-size: 0.9rem;
+  color: #14ffec;
+  margin-bottom: 20px;
+  font-style: italic;
+}

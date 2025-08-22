@@ -456,44 +456,67 @@ function cancelCrop() {
 
 // Check premium status
 async function checkPremiumStatus(force = false) {
-    // Если не принудительно и уже проверяли, то пропускаем
-    if (!force && localStorage.getItem('premiumChecked') === 'true') {
-        updatePremiumUI(); // Обновляем UI на основе текущего state.isPremium
-        return;
-    }
+  // ... существующий код ...
 
-    if (!state.firebaseInitialized || !state.user || state.user.uid === "guest") {
-        state.isPremium = false;
-        updatePremiumUI();
-        localStorage.setItem('premiumChecked', 'true'); // Помечаем, что проверка выполнена
-        return;
+  try {
+    const doc = await state.db.collection('users').doc(state.user.uid).get();
+    if (doc.exists) {
+      const userData = doc.data();
+      
+      // Check if subscription is still valid
+      const now = new Date();
+      let subscriptionValid = false;
+      
+      if (userData.subscriptionEnd) {
+        const subscriptionEnd = userData.subscriptionEnd.toDate();
+        subscriptionValid = now < subscriptionEnd;
+      }
+      
+      state.isPremium = userData.premium && subscriptionValid;
+      state.planType = userData.planType || '';
+      
+      // Если подписка истекла, обновляем статус
+      if (userData.premium && !subscriptionValid) {
+        await state.db.collection('users').doc(state.user.uid).update({
+          premium: false
+        });
+      }
+      
+      // Check trial period
+      if (userData.trialEnd && userData.trialEnd.toDate() > new Date()) {
+        state.isTrial = true;
+        state.trialDaysLeft = Math.ceil((userData.trialEnd.toDate() - new Date()) / (1000 * 60 * 60 * 24));
+        state.isPremium = true; // Give premium access during trial
+      } else {
+        state.isTrial = false;
+        state.trialDaysLeft = 0;
+      }
+      
+      localStorage.setItem('premiumUser', state.isPremium);
+      if (state.planType) {
+        localStorage.setItem('planType', state.planType);
+      }
+      if (userData.subscriptionEnd) {
+        localStorage.setItem('subscriptionEnd', userData.subscriptionEnd.toDate().toISOString());
+      }
     }
-
-    try {
-        const doc = await state.db.collection('users').doc(state.user.uid).get();
-        if (doc.exists) {
-            const userData = doc.data();
-            state.isPremium = userData.premium || false;
-            
-            // Check trial period
-            if (userData.trialEnd && userData.trialEnd.toDate() > new Date()) {
-                state.isTrial = true;
-                state.trialDaysLeft = Math.ceil((userData.trialEnd.toDate() - new Date()) / (1000 * 60 * 60 * 24));
-                state.isPremium = true; // Give premium access during trial
-            } else {
-                state.isTrial = false;
-                state.trialDaysLeft = 0;
-            }
-            
-            localStorage.setItem('premiumUser', state.isPremium);
-        }
-        updatePremiumUI();
-    } catch (error) {
-        console.error("Error getting premium status:", error);
-        state.isPremium = false;
-        updatePremiumUI();
+    updatePremiumUI();
+  } catch (error) {
+    console.error("Error getting premium status:", error);
+    // Fallback to localStorage
+    const subscriptionEnd = localStorage.getItem('subscriptionEnd');
+    const now = new Date();
+    
+    if (subscriptionEnd && new Date(subscriptionEnd) > now) {
+      state.isPremium = localStorage.getItem('premiumUser') === 'true';
+      state.planType = localStorage.getItem('planType') || '';
+    } else {
+      state.isPremium = false;
+      localStorage.setItem('premiumUser', 'false');
     }
-    localStorage.setItem('premiumChecked', 'true'); // Помечаем, что проверка выполнена
+    updatePremiumUI();
+  }
+  localStorage.setItem('premiumChecked', 'true');
 }
 
 // Initialize application
@@ -1009,21 +1032,25 @@ function showToast(message, duration = 3000) {
 
 // Update premium UI
 function updatePremiumUI() {
-    if (state.isTrial) {
-        elements.premiumStatus.textContent = `Trial (${state.trialDaysLeft}d left)`;
-        elements.premiumStatus.style.background = 'linear-gradient(135deg, #4CAF50, #8BC34A)';
-        elements.premiumStatus.style.color = '#fff';
-        elements.upgradeBtn.style.display = 'block';
-    } else if (state.isPremium) {
-        elements.premiumStatus.textContent = 'Premium';
-        elements.premiumStatus.style.background = 'linear-gradient(135deg, #ffd700, #ff9800)';
-        elements.premiumStatus.style.color = '#333';
-        elements.upgradeBtn.style.display = 'none';
+  if (state.isTrial) {
+    elements.premiumStatus.textContent = `Trial (${state.trialDaysLeft}d left)`;
+    elements.premiumStatus.style.background = 'linear-gradient(135deg, #4CAF50, #8BC34A)';
+    elements.premiumStatus.style.color = '#fff';
+    elements.upgradeBtn.style.display = 'block';
+  } else if (state.isPremium) {
+    if (state.planType === 'yearly') {
+      elements.premiumStatus.textContent = 'Premium Yearly';
     } else {
-        elements.premiumStatus.textContent = 'Basic';
-        elements.premiumStatus.style.background = '#a5b1c2';
-        elements.upgradeBtn.style.display = 'block';
+      elements.premiumStatus.textContent = 'Premium Monthly';
     }
+    elements.premiumStatus.style.background = 'linear-gradient(135deg, #ffd700, #ff9800)';
+    elements.premiumStatus.style.color = '#333';
+    elements.upgradeBtn.style.display = 'none';
+  } else {
+    elements.premiumStatus.textContent = 'Basic';
+    elements.premiumStatus.style.background = '#a5b1c2';
+    elements.upgradeBtn.style.display = 'block';
+  }
     
     // Enable AVIF for premium users
     const avifOption = document.querySelector('#format option[value="avif"]');
