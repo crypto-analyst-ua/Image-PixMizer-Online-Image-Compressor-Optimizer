@@ -48,15 +48,15 @@ const state = {
     batchEditMode: 'all',
     watermark: {
         enabled: false,
-        type: 'text', // 'text' или 'image'
+        type: 'text',
         text: 'Image Pixmizer',
         size: 24,
         opacity: 70,
         color: '#ffffff',
         position: 'bottom-right',
-        image: null, // для хранения файла изображения
-        imageUrl: null, // для хранения Data URL
-        scale: 20 // масштаб изображения в %
+        image: null,
+        imageUrl: null,
+        scale: 20
     },
     progressiveJpeg: false,
     removeMetadata: true,
@@ -69,9 +69,10 @@ const state = {
         sharpness: 0,
         temperature: 0
     },
-    cropper: null, // Для хранения экземпляра Cropper
+    cropper: null,
     isTrial: false,
-    trialDaysLeft: 0
+    trialDaysLeft: 0,
+    premiumFromUrl: false
 };
 
 // DOM Elements
@@ -163,7 +164,6 @@ const elements = {
     watermarkImagePreview: document.getElementById('watermarkImagePreview'),
     watermarkImageInput: document.getElementById('watermarkImageInput'),
     watermarkImageScale: document.getElementById('watermarkImageScale'),
-    // Добавляем элементы для премиум-функций
     createPdfBtn: document.getElementById('createPdfBtn'),
     extractPdfImagesBtn: document.getElementById('extractPdfImagesBtn'),
     pdfCompressorBtn: document.getElementById('pdfCompressorBtn'),
@@ -456,7 +456,13 @@ function cancelCrop() {
 
 // Check premium status
 async function checkPremiumStatus(force = false) {
-    // Если не принудительно и уже проверяли, то пропускаем
+    // Если уже premium из localStorage, пропускаем проверку
+    if (localStorage.getItem('premiumUser') === 'true') {
+        state.isPremium = true;
+        updatePremiumUI();
+        return;
+    }
+
     if (!force && localStorage.getItem('premiumChecked') === 'true') {
         updatePremiumUI(); // Обновляем UI на основе текущего state.isPremium
         return;
@@ -498,6 +504,19 @@ async function checkPremiumStatus(force = false) {
 
 // Initialize application
 async function init() {
+    // Обработка параметра premium из URL
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('premium') === 'true') {
+        // Устанавливаем премиум-статус и очищаем параметры URL
+        localStorage.setItem('premiumUser', 'true');
+        state.isPremium = true;
+        updatePremiumUI();
+        
+        // Очищаем URL от параметров
+        window.history.replaceState({}, document.title, window.location.pathname);
+        showToast('Premium status activated successfully!', 5000);
+    }
+
     // Initialize counter
     state.dailyCount = parseInt(localStorage.getItem('dailyCount')) || 0;
     state.lastProcessDate = localStorage.getItem('lastProcessDate');
