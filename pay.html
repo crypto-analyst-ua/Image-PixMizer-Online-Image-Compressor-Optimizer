@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Upgrade to Premium - Image PixMizer</title>
-  <script src="https://www.paypal.com/sdk/js?client-id=ATnZIAG3susq8624ujWJL8C5iu3D_1C6lQeYkuESE8VE_v7qonBxxeSFICHlY3dOq9XQD8GwAHne2Uwf&currency=USD"></script>
+  <script src="https://www.sandbox.paypal.com/sdk/js?client-id=ATnZIAG3susq8624ujWJL8C5iu3D_1C6lQeYkuESE8VE_v7qonBxxeSFICHlY3dOq9XQD8GwAHne2Uwf&currency=USD"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
@@ -541,13 +541,13 @@
   <script>
     // Firebase configuration
     const firebaseConfig = {
-  apiKey: "AIzaSyCFt14JeU4qGlPScGGXnFdKRwZ8iV8oZQY",
-  authDomain: "image-pixmizer.firebaseapp.com",
-  projectId: "image-pixmizer",
-  storageBucket: "image-pixmizer.firebasestorage.app",
-  messagingSenderId: "310177828908",
-  appId: "1:310177828908:web:264aa42b38b5cbb50fc189"
-};
+      apiKey: "AIzaSyCFt14JeU4qGlPScGGXnFdKRwZ8iV8oZQY",
+      authDomain: "image-pixmizer.firebaseapp.com",
+      projectId: "image-pixmizer",
+      storageBucket: "image-pixmizer.firebasestorage.app",
+      messagingSenderId: "310177828908",
+      appId: "1:310177828908:web:264aa42b38b5cbb50fc189"
+    };
 
     // Initialize Firebase
     let app, auth, db;
@@ -586,7 +586,7 @@
           return actions.order.capture().then(async function(details) {
             // Update user status
             try {
-              // Используем set с merge вместо update
+              // Use set with merge instead of update
               await db.collection('users').doc(user.uid).set({ 
                 premium: true,
                 premiumSince: firebase.firestore.Timestamp.now(),
@@ -613,17 +613,17 @@
                 </div>
               `;
               
-              // Увеличиваем задержку до 5 секунд для гарантии обновления
+              // Increase delay to 5 seconds to ensure update
               setTimeout(() => {
                 window.location.href = 'index.html?t=' + Date.now();
               }, 5000);
             } catch (error) {
-              console.error('Error updating status:', error);
+              console.error('Payment processing error:', error);
               
-              // Записываем статус локально как временное решение
+              // Record status locally as a temporary solution
               localStorage.setItem('premiumUser', 'true');
               
-              // Показываем сообщение об ошибке
+              // Show error message
               document.getElementById('paypalContainer').innerHTML = `
                 <div style="text-align: center; padding: 20px; color: #ffd700;">
                   <i class="fas fa-exclamation-triangle" style="font-size: 3rem; margin-bottom: 15px;"></i>
@@ -638,6 +638,9 @@
                 window.location.href = 'index.html?t=' + Date.now();
               }, 3000);
             }
+          }).catch(function(error) {
+            console.error('Payment capture error:', error);
+            showPaymentError('Payment processing failed. Please contact support.');
           });
         },
         onError: function(err) {
