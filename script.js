@@ -72,7 +72,8 @@ const state = {
     cropper: null,
     isTrial: false,
     trialDaysLeft: 0,
-    premiumFromUrl: false
+    premiumFromUrl: false,
+    premiumDaysLeft: 0
 };
 
 // DOM Elements
@@ -479,16 +480,32 @@ async function checkPremiumStatus(force = false) {
         const doc = await state.db.collection('users').doc(state.user.uid).get();
         if (doc.exists) {
             const userData = doc.data();
-            state.isPremium = userData.premium || false;
             
-            // Check trial period
+            // Проверяем trial период
             if (userData.trialEnd && userData.trialEnd.toDate() > new Date()) {
                 state.isTrial = true;
                 state.trialDaysLeft = Math.ceil((userData.trialEnd.toDate() - new Date()) / (1000 * 60 * 60 * 24));
-                state.isPremium = true; // Give premium access during trial
-            } else {
+                state.isPremium = true;
+            } 
+            // Проверяем платную подписку по дате окончания
+            else if (userData.premiumEnd && userData.premiumEnd.toDate() > new Date()) {
                 state.isTrial = false;
                 state.trialDaysLeft = 0;
+                state.isPremium = true;
+                state.premiumDaysLeft = Math.ceil((userData.premiumEnd.toDate() - new Date()) / (1000 * 60 * 60 * 24));
+            }
+            // Для обратной совместимости - если premium: true, но нет даты окончания
+            else if (userData.premium) {
+                state.isTrial = false;
+                state.trialDaysLeft = 0;
+                state.isPremium = true;
+                state.premiumDaysLeft = null;
+            }
+            else {
+                state.isTrial = false;
+                state.trialDaysLeft = 0;
+                state.isPremium = false;
+                state.premiumDaysLeft = 0;
             }
             
             localStorage.setItem('premiumUser', state.isPremium);
@@ -499,7 +516,7 @@ async function checkPremiumStatus(force = false) {
         state.isPremium = false;
         updatePremiumUI();
     }
-    localStorage.setItem('premiumChecked', 'true'); // Помечаем, что проверка выполнена
+    localStorage.setItem('premiumChecked', 'true');
 }
 
 // Initialize application
@@ -1034,7 +1051,11 @@ function updatePremiumUI() {
         elements.premiumStatus.style.color = '#fff';
         elements.upgradeBtn.style.display = 'block';
     } else if (state.isPremium) {
-        elements.premiumStatus.textContent = 'Premium';
+        if (state.premiumDaysLeft !== null && state.premiumDaysLeft > 0) {
+            elements.premiumStatus.textContent = `Premium (${state.premiumDaysLeft}d left)`;
+        } else {
+            elements.premiumStatus.textContent = 'Premium';
+        }
         elements.premiumStatus.style.background = 'linear-gradient(135deg, #ffd700, #ff9800)';
         elements.premiumStatus.style.color = '#333';
         elements.upgradeBtn.style.display = 'none';
@@ -1949,19 +1970,19 @@ function displayResults() {
             </div>
             <div class="stat-item">
                 <div class="stat-value">${formatFileSize(totalOriginalSize)}</div>
-                <div class="stat-label">Original Size</div>
+                <div class="stat-label>Original Size</div>
             </div>
             <div class="stat-item">
                 <div class="stat-value">${formatFileSize(totalOptimizedSize)}</div>
-                <div class="stat-label">Optimized Size</div>
+                <div class="stat-label>Optimized Size</div>
             </div>
             <div class="stat-item">
                 <div class="stat-value">${compressionRatio}%</div>
-                <div class="stat-label">Savings</div>
+                <div class="stat-label>Savings</div>
             </div>
             <div class="stat-item">
                 <div class="stat-value">${savings}</div>
-                <div class="stat-label">Saved</div>
+                <div class="stat-label>Saved</div>
             </div>
         `;
     }

@@ -632,7 +632,21 @@
           const userDoc = await db.collection('users').doc(user.uid).get();
           if (userDoc.exists) {
             const userData = userDoc.data();
+            // Check if premium is true and the subscription hasn't expired
             if (userData.premium) {
+              if (userData.premiumEnd) {
+                const premiumEndDate = userData.premiumEnd.toDate();
+                const currentDate = new Date();
+                if (premiumEndDate > currentDate) {
+                  return true;
+                } else {
+                  // Subscription has expired, update status
+                  await db.collection('users').doc(user.uid).update({
+                    premium: false
+                  });
+                  return false;
+                }
+              }
               return true;
             }
           }
@@ -699,14 +713,18 @@
               return actions.order.capture().then(async function (details) {
                 // Update user status
                 try {
+                  // Calculate premium end date (30 days from now)
+                  const premiumEndDate = new Date();
+                  premiumEndDate.setDate(premiumEndDate.getDate() + 30);
+                  
                   await db
                     .collection('users')
                     .doc(user.uid)
                     .set(
                       {
                         premium: true,
-                        premiumSince:
-                          firebase.firestore.FieldValue.serverTimestamp(),
+                        premiumSince: firebase.firestore.FieldValue.serverTimestamp(),
+                        premiumEnd: firebase.firestore.Timestamp.fromDate(premiumEndDate),
                         paymentId: details.id,
                         email: user.email,
                         lastPayment: details.update_time,
@@ -716,6 +734,7 @@
 
                   // Update localStorage
                   localStorage.setItem('premiumUser', 'true');
+                  localStorage.setItem('premiumEnd', premiumEndDate.toISOString());
 
                   // Show success message
                   document.getElementById('paypalContainer').innerHTML = `
@@ -814,10 +833,11 @@
         document.getElementById('logoutBtn').addEventListener('click', () => {
           auth.signOut().then(() => {
             localStorage.removeItem('premiumUser');
+            localStorage.removeItem('premiumEnd');
             window.location.href = 'auth.html';
           });
         });
       });
     </script>
   </body>
-</html>
+</html> 
